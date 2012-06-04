@@ -29,6 +29,7 @@ class DFIClient {
 			if($response->count() !== 0) {
 				// TODO: Insert all the elements from the response into the array.
 				
+				
 			} else {
 				return $result;
 			}
