@@ -53,6 +53,7 @@ class DFIHarvester {
 		
 		try {
 			$h = new DFIHarvester();
+			$h->fetchNewMovies();
 		} catch (RuntimeException $e) {
 			echo "\n";
 			die("An unexpected runtime error occured: ".$e->getMessage());
@@ -66,13 +67,13 @@ class DFIHarvester {
 	 * The CHAOS Portal client to be used for communication with the CHAOS Service. 
 	 * @var PortalClient
 	 */
-	protected $_chaos;
+	public $_chaos;
 	
 	/**
 	 * The DFI client to be used for communication with the DFI Service. 
 	 * @var PortalClient
 	 */
-	protected $_dfi;
+	public $_dfi;
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -149,6 +150,11 @@ class DFIHarvester {
 				$this->$fieldName = $config[$param];
 			}
 		}
+	}
+	
+	public function fetchNewMovies() {
+		$movies = $this->_dfi->fetchAllMovies();
+		var_dump($movies);
 	}
 	
 	// CHAOS specific
