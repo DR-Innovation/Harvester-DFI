@@ -51,6 +51,7 @@ class DFIIntoDKAHarvester {
 	const DKA_OBJECT_TYPE_NAME = "DKA Program";
 	const CHAOS_FOLDER = "DFI/public";
 	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
+	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
 	
 	/**
 	 * Main method of the harvester, call this once.
@@ -60,7 +61,8 @@ class DFIIntoDKAHarvester {
 		
 		try {
 			$h = new DFIIntoDKAHarvester();
-			$h->processMovies();
+			//$h->processMovies();
+			$h->processMovie("http://nationalfilmografien.service.dfi.dk/movie.svc/17");
 		} catch (RuntimeException $e) {
 			echo "\n";
 			die("An unexpected runtime error occured: ".$e->getMessage());
@@ -202,7 +204,7 @@ class DFIIntoDKAHarvester {
 		printf("Generated XML: %s", $xml);
 		
 		printf("\tSetting metadata on the CHAOS object: ");
-		$response = $this->_chaos->Metadata()->Set($object->GUID, $this->_DKAMetadataSchema->GUID, 'da', null, $xml);
+		$response = $this->_chaos->Metadata()->Set($object->GUID, $this->_DKAMetadataSchema->GUID, 'da', 1, $xml);
 		if(!$response->WasSuccess()) {
 			printf("Failed.\n");
 			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
@@ -331,7 +333,14 @@ class DFIIntoDKAHarvester {
 		return $results[0];
 	}
 	
+	/**
+	 * 
+	 * @param \dfi\model\MovieItem $movieItem
+	 */
 	protected function generateDKAObjectXML($movieItem) {
+		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
+		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
+		
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 		
 		/*
@@ -366,31 +375,72 @@ class DFIIntoDKAHarvester {
 		 */
 		
 		$result->addChild("Title", $movieItem->Title);
+		
 		// TODO: Consider if this is the correct mapping.
 		$result->addChild("Abstract", $movieItem->Comment);
+		
 		$result->addChild("Description", $movieItem->Description);
+		
 		$result->addChild("Organization", self::DFI_ORGANIZATION_NAME);
+		
 		// TODO: Look into which types are needed for what.
 		$result->addChild("Type", "Test");
+		
 		// TODO: Determine if this is when the import happened or when the movie was created?
 		if(strlen($movieItem->ProductionYear) > 0) {
 			$result->addChild("CreatedDate", self::yearToXMLDate((string)$movieItem->ProductionYear));
 		}
+		
 		if(strlen($movieItem->ReleaseYear) > 0) {
 			$result->addChild("FirstPublishedDate", self::yearToXMLDate((string)$movieItem->ReleaseYear));
 		}
+		
 		// TODO: Make sure that this can infact be the DFI ID.
 		$result->addChild("Identifier", $movieItem->ID);
+		
 		$contributors = $result->addChild("Contributor");
 		foreach($movieItem->Credits->children() as $creditListItem) {
-			$person = $contributors->addChild("Person");
-			$person->addAttribute("Name", $creditListItem->Name);
-			$person->addAttribute("Role", self::translateRole($creditListItem->Type));
+			if($this->isContributor($creditListItem->Type)) {
+				$person = $contributors->addChild("Person");
+				$person->addAttribute("Name", $creditListItem->Name);
+				$person->addAttribute("Role", self::translateCreditTypeToRole($creditListItem->Type));
+			}
 		}
-		//$result->addChild("CreatedDate", self::yearToXMLDate((string)$movieItem->ProductionYear));
-		//$result->addChild("FirstPublishedDate", self::yearToXMLDate((string)$movieItem->ReleaseYear));
 		
-		//
+		$creators = $result->addChild("Creator");
+		foreach($movieItem->xpath('/dfi:MovieItem/dfi:Credits/dfi:CreditListItem') as $creditListItem) {
+			if($this->isCreator($creditListItem->Type)) {
+				$person = $creators->addChild("Person");
+				$person->addAttribute("Name", $creditListItem->Name);
+				$person->addAttribute("Role", self::translateCreditTypeToRole($creditListItem->Type));
+			}
+		}
+		
+		$format = trim($movieItem->Format);
+		if($format !== '') {
+			$result->addChild("TechnicalComment", "Format: ". $format);
+		}
+		
+		// TODO: Consider if the location is the shooting location or the production location.
+		$result->addChild("Location", $movieItem->CountryOfOrigin);
+		
+		$result->addChild("RightsDescription", self::RIGHTS_DESCIPTION);
+		
+		/*
+		$GeoData = $result->addChild("GeoData");
+		$GeoData->addChild("Latitude", "0.0");
+		$GeoData->addChild("Longitude", "0.0");
+		*/
+		
+		$Categories = $result->addChild("Categories");
+		$Categories->addChild("Category", $movieItem->Category);
+		
+		foreach($movieItem->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
+			$Categories->addChild("Category", $subCategory);
+		}
+		
+		$Tags = $result->addChild("Tags");
+		$Tags->addChild("Tag", "DFI");
 		
 		/*
 		$imagesRef = $movieItem->Images;
@@ -413,11 +463,30 @@ class DFIIntoDKAHarvester {
 		return $dom->saveXML();
 	}
 	
-	public static function translateRole($role) {
-		switch($role) {
+	public static function translateCreditTypeToRole($type) {
+		switch($type) {
 			default:
-				return $role;
+				return $type;
 		}
+	}
+	
+	const CONTRIBUTOR = 0x01;
+	const CREATOR = 0x02;
+	public static function translateCreditTypeToContributorOrCreator($type) {
+		switch ($type) {
+			case 'Director':
+				return self::CREATOR;
+			default:
+				return self::CONTRIBUTOR;
+		}
+	}
+	
+	public static function isCreator($type) {
+		return self::translateCreditTypeToContributorOrCreator($type) == self::CREATOR;
+	}
+	
+	public static function isContributor($type) {
+		return self::translateCreditTypeToContributorOrCreator($type) == self::CONTRIBUTOR;
 	}
 	
 	public static function yearToXMLDate($year) {
