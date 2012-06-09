@@ -17,8 +17,6 @@
  * @since      File available since Release 0.1
  */
 
-use dfi\model\MovieItem;
-
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
@@ -33,6 +31,7 @@ spl_autoload_register("CaseSensitiveAutoload");
 // Bootstrapping CHAOS - end
 
 use CHAOS\Portal\Client\PortalClient;
+use dfi\model\MovieItem;
 use dfi\DFIClient;
 
 /**
@@ -49,7 +48,8 @@ class DFIIntoDKAHarvester {
 	const VERSION = "0.1";
 	const DKA_SCHEMA_NAME = "DKA";
 	const DKA_OBJECT_TYPE_NAME = "DKA Program";
-	const CHAOS_FOLDER = "DFI/public";
+	const DKA_XML_REVISION = 1; // Used when overwriting older versions of Metadata XML on a CHAOS object.
+	const DFI_FOLDER = "DFI/public";
 	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
 	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
 	
@@ -61,8 +61,8 @@ class DFIIntoDKAHarvester {
 		
 		try {
 			$h = new DFIIntoDKAHarvester();
-			//$h->processMovies();
-			$h->processMovie("http://nationalfilmografien.service.dfi.dk/movie.svc/17");
+			$h->processMovies();
+			//$h->processMovie("http://nationalfilmografien.service.dfi.dk/movie.svc/17");
 		} catch (RuntimeException $e) {
 			echo "\n";
 			die("An unexpected runtime error occured: ".$e->getMessage());
@@ -88,7 +88,11 @@ class DFIIntoDKAHarvester {
 	
 	protected $_DKAObjectType;
 	
-	protected $_CHAOSFolder;
+	protected $_DKAImageFormat;
+	
+	protected $_DKAVideoFormat;
+	
+	protected $_DFIFolder;
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -99,8 +103,8 @@ class DFIIntoDKAHarvester {
 		$url = "";
 		$this->loadConfiguration();
 		
-		$this->initializeCHAOS();
-		$this->initializeDFI();
+		$this->CHAOS_initialize();
+		$this->DFI_initialize();
 	}
 	
 	/**
@@ -169,11 +173,13 @@ class DFIIntoDKAHarvester {
 	
 	/**
 	 * Fetch and process all advailable DFI movies.
+	 * This method calls fetchAllMovies on the 
+	 * @param int $delay A non-negative integer specifing the amount of micro seconds to sleep between each call to the API when fetching movies, use this to do a slow fetch.
 	 */
-	public function processMovies() {
+	public function processMovies($delay = 0) {
 		printf("Fetching ids for all movies: ");
-		//$movies = $this->_dfi->fetchAllMovies(1000, 100000);
-		$movies = $this->_dfi->fetchMovies(0, 10);
+		//$movies = $this->_dfi->fetchAllMovies(1000, $delay);
+		$movies = $this->_dfi->fetchMovies(0, 10); // Used when debugging.
 		printf("done.\n");
 		
 		printf("Iterating over every movie.\n");
@@ -186,135 +192,97 @@ class DFIIntoDKAHarvester {
 	
 	/**
 	 * Fetch and process a single DFI movie.
+	 * @param string $reference the URL address referencing the movie through the DFI service.
+	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
+	 * this will most likely happen if the service is broken, or in lack of permissions.
 	 */
 	public function processMovie($reference) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
+		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
+		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
+		
 		// Check to see if this movie is known to CHAOS.
-		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_CHAOSFolder->ID, true, null, 0, 10);
+		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_DFIFolder->ID, true, null, 0, 10);
 		$object = $this->getOrCreateDKAObject($movieItem->id);
 		
+		/* // For debugging only
 		$dom = dom_import_simplexml($movieItem)->ownerDocument;
 		$dom->formatOutput = true;
-		
 		printf("Input XML: %s", $dom->saveXML());
+		*/
 		
 		$xml = $this->generateDKAObjectXML($movieItem);
-		
-		// Nice formatting.
+
+		/* // For debugging only - nice formatting.
 		printf("Generated XML: %s", $xml);
+		*/
 		
 		printf("\tSetting metadata on the CHAOS object: ");
-		$response = $this->_chaos->Metadata()->Set($object->GUID, $this->_DKAMetadataSchema->GUID, 'da', 1, $xml);
+		$response = $this->_chaos->Metadata()->Set($object->GUID, $this->_DKAMetadataSchema->GUID, 'da', self::DKA_XML_REVISION, $xml->saveXML());
+		if(!$response->WasSuccess()) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
+		} else {
+			printf("Succeeded.\n");
+		}
+		
+		/*
+		printf("\tSetting looking up attached files");
+		//$response = $this->_chaos->File()->Get();
 		if(!$response->WasSuccess()) {
 			printf("Failed.\n");
 			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
 		} else {
-			printf("Success.\n");
+			printf("Succeeded.\n");
 		}
+		*/
+		
+		$this->processMovieImages($object, $movieItem);
+		$this->processMovieVideos($object, $movieItem);
 		
 		exit;
 	}
 	
-	// CHAOS specific
-	protected function initializeCHAOS() {
-		printf("Creating a session for the CHAOS service on %s using clientGUID %s: ", $this->_CHAOSURL, $this->_CHAOSClientGUID);
-		
-		// Create a new client, a session is automaticly created.
-		$this->_chaos = new PortalClient($this->_CHAOSURL, $this->_CHAOSClientGUID);
-		if(!$this->_chaos->HasSession()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
-		} else {
-			printf("Succeeded: SessionGUID is %s\n", $this->_chaos->SessionGUID());
-		}
-		
-		$this->authenticateCHAOSSession();
-		$this->fetchDKAMetadataSchema();
-		$this->fetchDKAObjectType();
-		$this->fetchCHAOSFolder();
-	}
-	
-	protected function authenticateCHAOSSession() {
-		printf("Authenticating the session using email %s: ", $this->_CHAOSEmail);
-		$result = $this->_chaos->EmailPassword()->Login($this->_CHAOSEmail, $this->_CHAOSPassword);
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't authenticate the session, please check the CHAOS_EMAIL and CHAOS_PASSWORD parameters.");
-		} else {
-			printf("Succeeded.\n");
+	/**
+	 * Process all the images associated with a movie from the DFI service.
+	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the images should be added to.
+	 * @param \dfi\model\MovieItem $movieItem The DFI MovieItem from which the images should be extracted.
+	 */
+	public function processMovieImages($object, $movieItem) {
+		$imagesRef = $movieItem->Images;
+		$images = $this->_dfi->load($imagesRef);
+		foreach($images->PictureItem as $i) {
+			// The following line is needed as they forget to set their encoding.
+			$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
+			//echo "\$caption = $caption\n";
+			printf("\tFound an image with the caption '%s'.\n", $i->Caption);
+			// TODO: Make sure the _DKAImagesFormat is fetched correctly and use this to determine the $formatID.
+			// $this->_chaos->File()->Create($object->GUID, null, $formatID, $destinationID, $filename, $originalFilename, $folderPath);
 		}
 	}
 	
-	protected function fetchDKAMetadataSchema() {
-		printf("Looking up the DKA metadata schema GUID: ");
-		$result = $this->_chaos->MetadataSchema()->Get();
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't lookup the metadata schema for the DKA specific data.");
-		}
-		
-		// Extract the DKA metadata schema.
-		$this->_DKAMetadataSchema = null;
-		foreach($result->MCM()->Results() as $schema) {
-			if($schema->Name === self::DKA_SCHEMA_NAME) {
-				// We found the DKA metadata schema.
-				$this->_DKAMetadataSchema = $schema;
-				break;
-			}
-		}
-		
-		if($this->_DKAMetadataSchema == null) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't find the metadata schema for the DKA specific data.");
-		} else {
-			printf("Succeeded, it has GUID: %s\n", $this->_DKAMetadataSchema->GUID);
+	/**
+	 * Process all the movieclips associated with a movie from the DFI service.
+	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the movies should be added to.
+	 * @param \dfi\model\MovieItem $movieItem The DFI MovieItem from which the movies should be extracted.
+	 */
+	public function processMovieVideos($object, $movieItem) {
+		$movies = $movieItem->xpath("/dfi:MovieItem/dfi:FlashMovies/dfi:FlashMovieItem");
+		foreach($movies as $m) {
+			var_dump($m);
+			// TODO: Implement the creation of files in CHAOS.
 		}
 	}
 	
-	protected function fetchDKAObjectType() {
-		printf("Looking up the DKA Program type: ");
-		$result = $this->_chaos->ObjectType()->Get();
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't lookup the metadata schema for the DKA specific data.");
-		}
-		
-		$this->_DKAObjectType = null;
-		foreach($result->MCM()->Results() as $objectType) {
-			if($objectType->Name === self::DKA_OBJECT_TYPE_NAME) {
-				// We found the DKA Program type.
-				$this->_DKAObjectType = $objectType;
-				break;
-			}
-		}
-		
-		if($this->_DKAObjectType == null) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't find the DKA object type.");
-		} else {
-			printf("Succeeded, it has ID: %s\n", $this->_DKAObjectType->ID);
-		}
-	}
-	
-	protected function fetchCHAOSFolder() {
-		$this->_CHAOSFolder = null;
-		
-		printf("Looking up the CHAOS folder (%s) to place DFI items: ", self::CHAOS_FOLDER);
-		$path = $this->resolveFoldersOnPath(self::CHAOS_FOLDER);
-		if($path != null && is_array($path)) {
-			$this->_CHAOSFolder = end($path);
-		}
-		
-		if($this->_CHAOSFolder === null) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't find the folder to place DFI specific data.");
-		} else {
-			printf("Succeeded, it has ID: %s\n", $this->_CHAOSFolder->ID);
-		}
-	}
-	
+	/**
+	 * Gets or creates an object in the CHAOS service, which represents a
+	 * particular DFI movie.
+	 * @param int $DFIId The internal id of the movie in the DFI service.
+	 * @throws RuntimeException If the request or creation of the object fails.
+	 * @return stdClass Representing the CHAOS existing or newly created DKA program -object.
+	 */
 	protected function getOrCreateDKAObject($DFIId) {
-		$folderId = $this->_CHAOSFolder->ID;
+		$folderId = $this->_DFIFolder->ID;
 		// Query for a CHAOS Object that represents the DFI movie.
 		$response = $this->_chaos->Object()->Get("(FolderTree:$folderId)", null, null, 0, 1);
 		if(!$response->WasSuccess()) {
@@ -323,7 +291,7 @@ class DFIIntoDKAHarvester {
 		
 		// If it's not there, create it.
 		if($response->MCM()->TotalCount() == 0) {
-			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSFolder->ID);
+			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_DFIFolder->ID);
 			if(!$response->WasSuccess() || $response->MCM()->TotalCount() != 1) {
 				throw new RuntimeException("Couldn't create a DKA Object: ". $response->Error()->Message());
 			}
@@ -334,45 +302,15 @@ class DFIIntoDKAHarvester {
 	}
 	
 	/**
-	 * 
-	 * @param \dfi\model\MovieItem $movieItem
+	 * This is the "important" method which generates an metadata XML document from a MovieItem from the DFI service.
+	 * @param \dfi\model\MovieItem $movieItem A particular MovieItem from the DFI service, representing a particular movie.
+	 * @param bool $validateSchema Should the document be validated against the XML schema?
+	 * @throws Exception if $validateSchema is true and the validation fails.
+	 * @return DOMDocument Representing the DFI movie in the DKA Program specific schema.
 	 */
-	protected function generateDKAObjectXML($movieItem) {
-		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
-		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
+	protected function generateDKAObjectXML($movieItem, $validateSchema = false) {
 		
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
-		
-		/*
-		 * <?xml version="1.0" encoding="UTF-8"?>
-		 * <DKA xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="DKA.xsd">
-		 *   <Title>Title</Title>
-		 *   <Abstract>Abstract</Abstract>
-		 *   <Description>Description</Description>
-		 *   <Organization>Organization</Organization>
-		 *   <Type>Test</Type>
-		 *   <CreatedDate>2001-01-01</CreatedDate>
-		 *   <FirstPublishedDate>2001-01-01</FirstPublishedDate>
-		 *   <Identifier>Identifier</Identifier>
-		 *   <Contributor/>
-		 *   <Creator/>
-		 *   <TechnicalComment>TechnicalComment</TechnicalComment>
-		 *   <Location>Location</Location>
-		 *   <RightsDescription>RightsDescription</RightsDescription>
-		 *   <GeoData>
-		 *     <Latitude>0.0</Latitude>
-		 *     <Longitude>0.0</Longitude>
-		 *   </GeoData>
-		 *   <Categories>
-		 *     <Category>Category</Category>
-		 *   </Categories>
-		 *   <Tags>
-		 *     <Tag>Tag</Tag>
-		 *   </Tags>
-		 *   <ProductionID>ProductionID</ProductionID>
-		 *   <StreamDuration>StreamDuration</StreamDuration>
-		 * </DKA>
-		 */
 		
 		$result->addChild("Title", $movieItem->Title);
 		
@@ -403,7 +341,7 @@ class DFIIntoDKAHarvester {
 			if($this->isContributor($creditListItem->Type)) {
 				$person = $contributors->addChild("Person");
 				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole($creditListItem->Type));
+				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
 			}
 		}
 		
@@ -412,7 +350,7 @@ class DFIIntoDKAHarvester {
 			if($this->isCreator($creditListItem->Type)) {
 				$person = $creators->addChild("Person");
 				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole($creditListItem->Type));
+				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
 			}
 		}
 		
@@ -426,7 +364,7 @@ class DFIIntoDKAHarvester {
 		
 		$result->addChild("RightsDescription", self::RIGHTS_DESCIPTION);
 		
-		/*
+		/* // Needs to be here if the validation should succeed.
 		$GeoData = $result->addChild("GeoData");
 		$GeoData->addChild("Latitude", "0.0");
 		$GeoData->addChild("Longitude", "0.0");
@@ -442,36 +380,42 @@ class DFIIntoDKAHarvester {
 		$Tags = $result->addChild("Tags");
 		$Tags->addChild("Tag", "DFI");
 		
-		/*
-		$imagesRef = $movieItem->Images;
-		$images = $this->_dfi->load($imagesRef);
-		foreach($images->PictureItem as $i) {
-			//$caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
-			//echo "\$caption = $caption\n";
-				
-		}
+		/* // Needs to be here if the validation should succeed.
+		$result->addChild("ProductionID");
+		
+		$result->addChild("StreamDuration");
 		*/
 		
 		$dom = dom_import_simplexml($result)->ownerDocument;
 		$dom->formatOutput = true;
-		/*
-		if(!$dom->schemaValidateSource($this->_DKAMetadataSchema->SchemaXML)) {
+		
+		if($validateSchema && !$dom->schemaValidateSource($this->_DKAMetadataSchema->SchemaXML)) {
 			throw new Exception("The XML generated does not validate with the schema.");
 		}
-		*/
 		
-		return $dom->saveXML();
+		return $dom;
 	}
 	
+	/**
+	 * Applies translation of different types of persons.
+	 * @param string $type The type to be translated.
+	 */
 	public static function translateCreditTypeToRole($type) {
-		switch($type) {
-			default:
-				return $type;
+		$ROLE_TRANSLATIONS = array(); // Right now no translation is provided.
+		if(key_exists($type, $ROLE_TRANSLATIONS)) {
+			return $this->_roleTranslations[$type];
+		} else {
+			return $type;
 		}
 	}
 	
 	const CONTRIBUTOR = 0x01;
 	const CREATOR = 0x02;
+	/**
+	 * Devides the types known by DFI into Creator or Contributor known by a DKA Program.
+	 * @param string $type The type to be translated.
+	 * @return int Either the value of the CONTRIBUTOR or the CREATOR class constants.
+	 */
 	public static function translateCreditTypeToContributorOrCreator($type) {
 		switch ($type) {
 			case 'Director':
@@ -481,14 +425,32 @@ class DFIIntoDKAHarvester {
 		}
 	}
 	
+	/**
+	 * Checks if a type known by DFI is a Creator in the DKA Program notion.
+	 * @param string $type
+	 * @return boolean True if it should be treated as a creator, false otherwise.
+	 */
 	public static function isCreator($type) {
 		return self::translateCreditTypeToContributorOrCreator($type) == self::CREATOR;
 	}
 	
+	/**
+	 * Checks if a type known by DFI is a Contributor in the DKA Program notion.
+	 * @param string $type
+	 * @return boolean True if it should be treated as a contributor, false otherwise.
+	 */
 	public static function isContributor($type) {
 		return self::translateCreditTypeToContributorOrCreator($type) == self::CONTRIBUTOR;
 	}
 	
+	// Helpers
+	
+	/**
+	 * Transforms a 4-digit year into an XML data YYYY-MM-DD format.
+	 * @param string $year The 4-digit representation of a year.
+	 * @throws InvalidArgumentException If this is not null, an empty string or a 4-digit string.
+	 * @return NULL|unknown|string The expected result, null or the empty string if this was the input argument.
+	 */
 	public static function yearToXMLDate($year) {
 		if($year === null) {
 			return null;
@@ -501,8 +463,13 @@ class DFIIntoDKAHarvester {
 		}
 	}
 	
-	// Helpers
-	
+	/**
+	 * Resolves the CHAOS folders on a path, by recursively calling and storing each foldername along the path.
+	 * @param string|array $path The path.
+	 * @param unknown_type $parentId The parent ID of the folder from which to start the search, null if the path is absolute.
+	 * @throws InvalidArgumentException If the argument is neither a string nor an array.
+	 * @return multitype:stdClass An array of CHAOS folders, as returned from the service.
+	 */
 	protected function resolveFoldersOnPath($path, $parentId = null) {
 		if(is_string($path)) {
 			// Extract an array of non empty folder names on the path.
@@ -544,8 +511,161 @@ class DFIIntoDKAHarvester {
 		}
 	}
 	
-	// DFI specific
-	protected function initializeDFI() {
+	// CHAOS specific methods
+	
+	/**
+	 * Initialize the CHAOS part of the harvester.
+	 * This involves fetching a session from the service,
+	 * authenticating it,
+	 * fetching the metadata schema for the DKA Program content,
+	 * fetching the object type (DKA Program) to identify its id on the CHAOS service,
+	 * fetching the DKA image format to use for images associated with a particular DFI movie,
+	 * fetching the DKA video format to use for movieclips associated with a particular DFI movie,
+	 * fetching the folder on the CHAOS system to use when creating DKA Programs, based on the DFI_FOLDER const. 
+	 * @throws RuntimeException If any service call fails. This might be due to an unadvailable service,
+	 * or an unenticipated change in the protocol.
+	 */
+	protected function CHAOS_initialize() {
+		printf("Creating a session for the CHAOS service on %s using clientGUID %s: ", $this->_CHAOSURL, $this->_CHAOSClientGUID);
+		
+		// Create a new client, a session is automaticly created.
+		$this->_chaos = new PortalClient($this->_CHAOSURL, $this->_CHAOSClientGUID);
+		if(!$this->_chaos->HasSession()) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
+		} else {
+			printf("Succeeded: SessionGUID is %s\n", $this->_chaos->SessionGUID());
+		}
+		
+		$this->CHAOS_authenticateSession();
+		$this->CHAOS_fetchDKAMetadataSchema();
+		$this->CHAOS_fetchDKAObjectType();
+		$this->CHAOS_fetchDKAImageFormat();
+		$this->CHAOS_fetchDKAVideoFormat();
+		$this->CHAOS_fetchDFIFolder();
+	}
+	
+	/**
+	 * Authenticate the CHAOS session using the environment variables for email and password.
+	 * @throws RuntimeException If the authentication fails.
+	 */
+	protected function CHAOS_authenticateSession() {
+		printf("Authenticating the session using email %s: ", $this->_CHAOSEmail);
+		$result = $this->_chaos->EmailPassword()->Login($this->_CHAOSEmail, $this->_CHAOSPassword);
+		if(!$result->WasSuccess()) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't authenticate the session, please check the CHAOS_EMAIL and CHAOS_PASSWORD parameters.");
+		} else {
+			printf("Succeeded.\n");
+		}
+	}
+	
+	/**
+	 * Fetches the DKA Program metadata schema and stores it in the _DKAMetadataSchema field.
+	 * @throws RuntimeException If it fails.
+	 */
+	protected function CHAOS_fetchDKAMetadataSchema() {
+		printf("Looking up the DKA metadata schema GUID: ");
+		$result = $this->_chaos->MetadataSchema()->Get();
+		if(!$result->WasSuccess()) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't lookup the metadata schema for the DKA specific data.");
+		}
+		
+		// Extract the DKA metadata schema.
+		$this->_DKAMetadataSchema = null;
+		foreach($result->MCM()->Results() as $schema) {
+			if($schema->Name === self::DKA_SCHEMA_NAME) {
+				// We found the DKA metadata schema.
+				$this->_DKAMetadataSchema = $schema;
+				break;
+			}
+		}
+		
+		if($this->_DKAMetadataSchema == null) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't find the metadata schema for the DKA specific data.");
+		} else {
+			printf("Succeeded, it has GUID: %s\n", $this->_DKAMetadataSchema->GUID);
+		}
+	}
+	
+	/**
+	 * Fetches the DKA Program object type and stores it in the _DKAObjectType field.
+	 * @throws RuntimeException If it fails.
+	 */
+	protected function CHAOS_fetchDKAObjectType() {
+		printf("Looking up the DKA Program type: ");
+		$result = $this->_chaos->ObjectType()->Get();
+		if(!$result->WasSuccess()) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't lookup the metadata schema for the DKA specific data.");
+		}
+		
+		$this->_DKAObjectType = null;
+		foreach($result->MCM()->Results() as $objectType) {
+			if($objectType->Name === self::DKA_OBJECT_TYPE_NAME) {
+				// We found the DKA Program type.
+				$this->_DKAObjectType = $objectType;
+				break;
+			}
+		}
+		
+		if($this->_DKAObjectType == null) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't find the DKA object type.");
+		} else {
+			printf("Succeeded, it has ID: %s\n", $this->_DKAObjectType->ID);
+		}
+	}
+	
+	/**
+	 * Fetches the DKA Image format and stores it in the _DKAImageFormat field.
+	 * @throws RuntimeException If it fails.
+	 */
+	protected function CHAOS_fetchDKAImageFormat() {
+		// TODO: Implement to change the value of $this->_DKAImageFormat
+		// This is not possible atm as the CHAOS PHP-SDK does not support Get queries for formats.
+	}
+	
+	/**
+	 * Fetches the DKA Video format and stores it in the _DKAVideoFormat field.
+	 * @throws RuntimeException If it fails.
+	 */
+	protected function CHAOS_fetchDKAVideoFormat() {
+		// TODO: Implement to change the value of $this->_DKAVideoFormat
+		// This is not possible atm as the CHAOS PHP-SDK does not support Get queries for formats.
+	}
+	
+	/**
+	 * Fetches the folder on the CHAOS system to use when creating DKA Programs,
+	 * based on the DFI_FOLDER const. This is stores in the _DFIFolder field.
+	 * @throws RuntimeException If it fails.
+	 */
+	protected function CHAOS_fetchDFIFolder() {
+		$this->_DFIFolder = null;
+		
+		printf("Looking up the CHAOS folder (%s) to place DFI items: ", self::DFI_FOLDER);
+		$path = $this->resolveFoldersOnPath(self::DFI_FOLDER);
+		if($path != null && is_array($path)) {
+			$this->_DFIFolder = end($path);
+		}
+		
+		if($this->_DFIFolder === null) {
+			printf("Failed.\n");
+			throw new RuntimeException("Couldn't find the folder to place DFI specific data.");
+		} else {
+			printf("Succeeded, it has ID: %s\n", $this->_DFIFolder->ID);
+		}
+	}
+	
+	// DFI specific methods.
+	
+	/**
+	 * Initialized the DFI client by making a simple test to see if the service is advailable.
+	 * @throws RuntimeException If the service is unadvailable.
+	 */
+	protected function DFI_initialize() {
 		printf("Looking up the DFI service %s: ", $this->_DFIUrl);
 		$this->_dfi = new DFIClient($this->_DFIUrl);
 		if(!$this->_dfi->isServiceAdvailable()) {
@@ -557,4 +677,5 @@ class DFIIntoDKAHarvester {
 	}
 }
 
+// Call the main method of the class.
 DFIIntoDKAHarvester::main();
