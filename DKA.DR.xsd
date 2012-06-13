@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.example.org/DKA.DR" xmlns:tns="http://www.example.org/DKA.DR" elementFormDefault="qualified">
+
+
+    <element name="DR">
+    	<complexType>
+    		<sequence>
+    			<element name="ProductionID" type="string"></element>
+    			<element name="StreamDuration" type="string"></element>
+    		</sequence>
+    	</complexType>
+    </element>
+</schema>

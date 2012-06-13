@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.example.org/DKA.DFI" xmlns:tns="http://www.example.org/DKA.DFI" elementFormDefault="qualified">
+
+    <element name="DFI">
+	    <complexType>
+	    	<sequence>
+	    		<element name="ID" type="unsignedInt"></element>
+	    	</sequence>
+	    </complexType>
+    </element>
+    
+</schema>
