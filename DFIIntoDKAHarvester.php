@@ -294,7 +294,7 @@ class DFIIntoDKAHarvester {
 				$elapsed = (microtime(true) - $start) * 1000.0;
 				printf("Completed the processing .. took %ums\n", round($elapsed));
 			} catch (RuntimeException $e) {
-				if($e->getMessage() == 'Session has expired') {
+				if(strstr($e->getMessage(), 'Session has expired') !== false) {
 					printf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
 					// Reauthenticate!
 					$this->CHAOS_initialize();
