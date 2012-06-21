@@ -286,12 +286,25 @@ class DFIIntoDKAHarvester {
 		
 		printf("Iterating over every movie.\n");
 		for($i = 0; $i < count($movies); $i++) {
-			$m = $movies[$i];
-			printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
-			$start = microtime(true);
-			$this->processMovie($m->Ref);
-			$elapsed = (microtime(true) - $start) * 1000.0;
-			printf("Completed the processing .. took %ums\n", round($elapsed));
+			try {
+				$m = $movies[$i];
+				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
+				$start = microtime(true);
+				$this->processMovie($m->Ref);
+				$elapsed = (microtime(true) - $start) * 1000.0;
+				printf("Completed the processing .. took %ums\n", round($elapsed));
+			} catch (RuntimeException $e) {
+				if($e->getMessage() == 'Session has expired') {
+					printf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
+					// Reauthenticate!
+					$this->CHAOS_initialize();
+					// Retry
+					$i--;
+					continue;
+				} else {
+					throw $e;
+				}
+			}
 		}
 	}
 	
@@ -539,12 +552,12 @@ class DFIIntoDKAHarvester {
 			if($printProgress) {
 				echo "!";
 			}
-			throw new RuntimeException("Failed to create the video file in the CHAOS service: ". $response->Error()->Message());
+			throw new RuntimeException("Failed to create the file in the CHAOS service: ". $response->Error()->Message());
 		} elseif (!$response->MCM()->WasSuccess()) {
 			if($printProgress) {
 				echo "!";
 			}
-			throw new RuntimeException("Failed to create the video file in the CHAOS service: ". $response->MCM()->Error()->Message());
+			throw new RuntimeException("Failed to create the file in the CHAOS service: ". $response->MCM()->Error()->Message());
 		} else {
 			if($printProgress) {
 				echo "+";
