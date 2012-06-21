@@ -1,12 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.example.org/DKA.DFI" xmlns:tns="http://www.example.org/DKA.DFI" elementFormDefault="qualified">
-
-    <element name="DFI">
-	    <complexType>
-	    	<sequence>
-	    		<element name="ID" type="unsignedInt"></element>
-	    	</sequence>
-	    </complexType>
-    </element>
-    
-</schema>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" attributeFormDefault="unqualified" elementFormDefault="qualified">
+    <xs:element name="DFI">
+	    <xs:complexType>
+	    	<xs:sequence>
+	    		<xs:element name="ID" type="xs:unsignedInt"></xs:element>
+	    	</xs:sequence>
+	    </xs:complexType>
+    </xs:element>
+</xs:schema>

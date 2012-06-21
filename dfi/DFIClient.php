@@ -71,14 +71,13 @@ class DFIClient {
 	 * @throws RuntimeException If it fails to fetch the movies using the given parameters.
 	 * @return multitype:SimpleXMLElement An array of movies.
 	 */
-	public function fetchAllMovies($batchSize = 1000, $delay = 0) {
+	public function fetchMultipleMovies($offset = 0, $count = null, $batchSize = 1000, $delay = 0) {
 		if($batchSize > 1000) {
 			throw new InvalidArgumentException("\$batchSize cannot exceed 1000, as this is not supported by the service anyway");
 		} elseif($batchSize < 1) {
 			throw new InvalidArgumentException("\$batchSize below 1 makes no sence.");
 		}
 		$result = array();
-		$offset = 0;
 		while(true) {
 			$partialMovies = $this->fetchMovies($offset, $batchSize);
 			if($partialMovies === false) {
@@ -88,6 +87,9 @@ class DFIClient {
 				foreach($partialMovies as $m) {
 					/* @var $c SimpleXMLElement */
 					$result[] = $m;
+					if($count != null && count($result) >= $count) {
+						return $result;
+					}
 				}
 				
 				// Increment the offset

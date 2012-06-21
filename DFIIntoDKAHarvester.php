@@ -19,6 +19,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+libxml_use_internal_errors();
 
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
@@ -49,9 +50,11 @@ class DFIIntoDKAHarvester {
 	const DKA_SCHEMA_NAME = "DKA";
 	const DKA2_SCHEMA_NAME = "DKA2";
 	const DFI_SCHEMA_NAME = "DKA.DFI";
+	
 	const DKA_OBJECT_TYPE_NAME = "DKA Program";
+	//const DFI_FOLDER = "DFI/public";
+	
 	//const DKA_XML_REVISION = 1; // Used when overwriting older versions of Metadata XML on a CHAOS object.
-	const DFI_FOLDER = "DFI/public";
 	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
 	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
 	const DFI_IMAGE_SCANPIX_BASE_PATH = 'http://www2.scanpix.eu/';
@@ -60,21 +63,82 @@ class DFIIntoDKAHarvester {
 	/**
 	 * Main method of the harvester, call this once.
 	 */
-	function main() {
+	function main($args = array()) {
 		printf("DFIIntoDKAHarvester %s started %s.\n", DFIIntoDKAHarvester::VERSION, date('D, d M Y H:i:s'));
 		
+		$runtimeOptions = self::extractOptionsFromArguments($args);
+		
+		$start = time();
 		try {
 			$h = new DFIIntoDKAHarvester();
-			//$h->processMovies();
-			//$h->processMovie("http://nationalfilmografien.service.dfi.dk/movie.svc/17");
-			$h->processMovie("http://nationalfilmografien.service.dfi.dk/movie.svc/7286");
+			if(array_key_exists('range', $runtimeOptions)) {
+				$rangeParams = explode('-', $runtimeOptions['range']);
+				if(count($rangeParams) == 2) {
+					$start = intval($rangeParams[0]);
+					$end = intval($rangeParams[1]);
+					if($end < $start) {
+						throw new InvalidArgumentException("Given a range parameter which has end < start.");
+					}
+					$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
+					$h->processMovies($start, $end-$start+1, $delay);
+				} else {
+					throw new InvalidArgumentException("Given a range parameter was malformed.");
+				}
+			} elseif(array_key_exists('single', $runtimeOptions)) {
+				$dfiID = intval($runtimeOptions['single']);
+				printf("Updating a single DFI record (#%u).\n", $dfiID);
+				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID);
+				printf("Done.\n", $dfiID);
+			} elseif(array_key_exists('all', $runtimeOptions) && $runtimeOptions['all'] == true) {
+				$h->processMovies();
+			} else {
+				throw new InvalidArgumentException("None of --all, --single or --range was sat.");
+			}
+			//
+		} catch(InvalidArgumentException $e) {
+			echo "\n";
+			printf("Invalid arguments given: %s\n", $e->getMessage());
+			self::printUsage($args);
+			exit;
 		} catch (RuntimeException $e) {
 			echo "\n";
-			die("An unexpected runtime error occured: ".$e->getMessage());
+			printf("An unexpected runtime error occured: %s\n", $e->getMessage());
+			exit;
 		} catch (Exception $e) {
 			echo "\n";
-			die("Error occured in the harvester implementation: ".$e);
+			printf("Error occured in the harvester implementation: %s\n", $e);
+			exit;
 		}
+		$elapsed = time() - $start;
+		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
+	}
+	
+	protected static function extractOptionsFromArguments($args) {
+		$result = array();
+		for($i = 0; $i < count($args); $i++) {
+			if(strpos($args[$i], '--') === 0) {
+				$equalsIndex = strpos($args[$i], '=');
+				if($equalsIndex === false) {
+					$name = substr($args[$i], 2);
+					$result[$name] = true;
+				} else {
+					$name = substr($args[$i], 2, $equalsIndex-2);
+					$value = substr($args[$i], $equalsIndex+1);
+					if($value == 'true') {
+						$result[$name] = true;
+					} elseif($value == 'false') {
+						$result[$name] = false;
+					} else {
+						$result[$name] = $value;
+					}
+				}
+			}
+		}
+		return $result;
+	}
+	
+	protected static function printUsage($args) {
+		printf("Usage:\n\t%s [--all|--single={dfi-id}|--range={start-row}-{end-row}]\n", $args[0]);
 	}
 	
 	/**
@@ -89,15 +153,11 @@ class DFIIntoDKAHarvester {
 	 */
 	public $_dfi;
 	
-	protected $_MetadataSchemas;
-	
 	protected $_DKAObjectType;
 	
 // 	protected $_DKAImageFormat;
 	
 // 	protected $_DKAVideoFormat;
-	
-	protected $_DFIFolder;
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -165,6 +225,8 @@ class DFIIntoDKAHarvester {
 	 */
 	protected $_CHAOSVideoDestinationID;
 	
+	protected $_CHAOSDFIFolderID;
+	
 	/**
 	 * An associative array describing the configuration parameters for the harvester.
 	 * This should ideally not be changed.
@@ -180,7 +242,8 @@ class DFIIntoDKAHarvester {
 		"CHAOS_THUMBNAIL_IMAGE_FORMAT_ID" => "_CHAOSThumbnailImageFormatID",
 		"CHAOS_VIDEO_FORMAT_ID" => "_CHAOSVideoFormatID",
 		"CHAOS_IMAGE_DESTINATION_ID" => "_CHAOSImageDestinationID",
-		"CHAOS_VIDEO_DESTINATION_ID" => "_CHAOSVideoDestinationID"
+		"CHAOS_VIDEO_DESTINATION_ID" => "_CHAOSVideoDestinationID",
+		"CHAOS_DFI_FOLDER_ID" => "_CHAOSDFIFolderID"
 	);
 	
 	/**
@@ -212,17 +275,23 @@ class DFIIntoDKAHarvester {
 	 * This method calls fetchAllMovies on the 
 	 * @param int $delay A non-negative integer specifing the amount of micro seconds to sleep between each call to the API when fetching movies, use this to do a slow fetch.
 	 */
-	public function processMovies($delay = 0) {
+	public function processMovies($offset = 0, $count = null, $delay = 0) {
 		printf("Fetching ids for all movies: ");
-		//$movies = $this->_dfi->fetchAllMovies(1000, $delay);
-		$movies = $this->_dfi->fetchMovies(0, 10); // Used when debugging.
-		printf("done.\n");
+		$start = microtime(true);
+		
+		$movies = $this->_dfi->fetchMultipleMovies($offset, $count, 1000, $delay);
+		
+		$elapsed = (microtime(true) - $start) * 1000.0;
+		printf("done .. took %ums\n", round($elapsed));
 		
 		printf("Iterating over every movie.\n");
 		for($i = 0; $i < count($movies); $i++) {
 			$m = $movies[$i];
-			printf("Starting to process '%s' (%u/%u)\n", $m->Name, $i+1, count($movies));
+			printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
+			$start = microtime(true);
 			$this->processMovie($m->Ref);
+			$elapsed = (microtime(true) - $start) * 1000.0;
+			printf("Completed the processing .. took %ums\n", round($elapsed));
 		}
 	}
 	
@@ -237,9 +306,15 @@ class DFIIntoDKAHarvester {
 		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
 		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
 		
+		$shouldBeCensored = self::shouldBeCensored($movieItem);
+		if($shouldBeCensored !== false) {
+			printf("\tSkipping this movie, as it contains material that should be censored: '%s'\n", $shouldBeCensored);
+			return;
+		}
+		
 		// Check to see if this movie is known to CHAOS.
 		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_DFIFolder->ID, true, null, 0, 10);
-		$object = $this->getOrCreateObject($movieItem->id);
+		$object = $this->getOrCreateObject($movieItem->ID);
 		
 		// We create a list of files that have been processed and reused.
 		$object->ProcessedFiles = array();
@@ -257,30 +332,22 @@ class DFIIntoDKAHarvester {
 		// Do we have any files on the object which has not been processed by the search?
 		foreach($object->Files as $f) {
 			if(!in_array($f, $object->ProcessedFiles)) {
-				printf("\t[!] The file '%s' (%s) was a file of the object, but not processed, maybe it was deleted from the DFI service.", $f->Filename, $f->ID);
+				printf("\t[!] The file '%s' (%s) was a file of the object, but not processed, maybe it was deleted from the DFI service.\n", $f->Filename, $f->ID);
 			}
 		}
 		
-		/* // For debugging only
-		$dom = dom_import_simplexml($movieItem)->ownerDocument;
-		$dom->formatOutput = true;
-		printf("Input XML: %s", $dom->saveXML());
-		*/
-		
 		$xml = $this->generateXML($movieItem, $types);
 		
-		/* // For debugging only - nice formatting.
-		printf("Generated XML: %s", $xml);
-		*/
+		$revisions = self::extractMetadataRevisions($object);
 		
-		$revisions = self::extractMetadataRevisions($this->_MetadataSchemas, $object);
-		
-		foreach($this->_MetadataSchemas as $name => $schema) {
-			printf("\tSetting '$name' metadata on the CHAOS object: ");
+		foreach($xml as $schemaGUID => $metadata) {
 			// This is not implemented.
 			// $currentMetadata = $this->_chaos->Metadata()->Get($object->GUID, $schema->GUID, 'da');
 			//var_dump($currentMetadata);
-			$response = $this->_chaos->Metadata()->Set($object->GUID, $schema->GUID, 'da', $revisions[$name], $xml[$name]->saveXML());
+			$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
+			printf("\tSetting '%s' metadata on the CHAOS object (overwriting revision %u): ", $schemaGUID, $revision);
+			
+			$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
 			if(!$response->WasSuccess()) {
 				printf("Failed.\n");
 				throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
@@ -288,8 +355,6 @@ class DFIIntoDKAHarvester {
 				printf("Succeeded.\n");
 			}
 		}
-		
-		exit;
 	}
 	
 	/**
@@ -301,7 +366,11 @@ class DFIIntoDKAHarvester {
 		$imagesProcessed = 0;
 		$urlBase = self::DFI_IMAGE_SCANPIX_BASE_PATH;
 		
-		$imagesRef = $movieItem->Images;
+		$imagesRef = strval($movieItem->Images);
+		if ($imagesRef == null || $imagesRef === '') {
+			printf("\tFound no reference to images:\tDone\n");
+			return;
+		}
 		$images = $this->_dfi->load($imagesRef);
 		
 		printf("\tUpdating files for %u images:\t", count($images->PictureItem));
@@ -315,7 +384,6 @@ class DFIIntoDKAHarvester {
 			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
 			//echo "\$caption = $caption\n";
 			//printf("\tFound an image with the caption '%s'.\n", $i->Caption);
-			// TODO: Make sure the _DKAImagesFormatID is fetched correctly and use this to determine the $formatID.
 			$imageURLS = array(
 					(string)$i->SrcMini => (integer)$this->_CHAOSImageFormatID,
 					(string)$i->SrcThumb => (integer)$this->_CHAOSThumbnailImageFormatID);
@@ -355,18 +423,12 @@ class DFIIntoDKAHarvester {
 		$movies = $movieItem->xpath("/dfi:MovieItem/dfi:FlashMovies/dfi:FlashMovieItem");
 		
 		printf("\tUpdating files for %u videos:\t", count($movies));
-		//$this->resetProgress(count($movies));
-		//$progress = 0;
 		
 		echo self::PROGRESS_END_CHAR;
 		foreach($movies as $m) {
-			//$this->updateProgress($progress++);
-			// TODO: Implement the creation of files in CHAOS.
 			// The following line is needed as they forget to set their encoding.
 			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
-			//echo "\$caption = $caption\n";
-			//printf("\tFound an image with the caption '%s'.\n", $i->Caption);
-			// TODO: Make sure the _DKAImagesFormatID is fetched correctly and use this to determine the $formatID.
+			
 			$miniFilenameMatches = array();
 			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $miniFilenameMatches) === 1) {
 				$pathinfo = pathinfo($miniFilenameMatches[1]);
@@ -395,16 +457,21 @@ class DFIIntoDKAHarvester {
 	 * @return stdClass Representing the CHAOS existing or newly created DKA program -object.
 	 */
 	protected function getOrCreateObject($DFIId) {
-		$folderId = $this->_DFIFolder->ID;
+		if($DFIId == null || !is_numeric(strval($DFIId))) {
+			throw new RuntimeException("Cannot get or create a CHAOS object for a DFI film without an internal DFI ID (got '$DFIId').");
+		}
+		$folderId = $this->_CHAOSDFIFolderID;
 		$objectTypeId = $this->_DKAObjectType->ID;
 		// Query for a CHAOS Object that represents the DFI movie.
-		// TODO: Add the internal DKA ID the a DKA specific schema and include this in the query.
-		$response = $this->_chaos->Object()->Get("(FolderTree:$folderId AND ObjectTypeID:$objectTypeId)", "DateCreated+desc", null, 0, 100, true, true);
+		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
+		//printf("Solr query: %s\n", $query);
+		$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
+		//$response = $this->_chaos->Object()->Get("(FolderTree:$folderId AND ObjectTypeID:$objectTypeId)", "DateCreated+desc", null, 0, 100, true, true);
 		
 		if(!$response->WasSuccess()) {
-			throw new RuntimeException("Couldn't complete the request for a movie: ". $response->Error()->Message());
+			throw new RuntimeException("Couldn't complete the request for a movie: (Request error) ". $response->Error()->Message());
 		} else if(!$response->MCM()->WasSuccess()) {
-			throw new RuntimeException("Couldn't complete the request for a movie: ". $response->MCM()->Error()->Message());
+			throw new RuntimeException("Couldn't complete the request for a movie: (MCM error) ". $response->MCM()->Error()->Message());
 		}
 		
 		$results = $response->MCM()->Results();
@@ -413,12 +480,14 @@ class DFIIntoDKAHarvester {
 		// If it's not there, create it.
 		if($response->MCM()->TotalCount() == 0) {
 			printf("\tFound a film in the DFI service which is not already represented by a CHAOS object.\n");
-			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_DFIFolder->ID);
+			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSDFIFolderID);
 			$results = $response->MCM()->Results();
-			if(!$response->WasSuccess() || $response->MCM()->TotalCount() != 1) {
+			if(!$response->WasSuccess()) {
 				throw new RuntimeException("Couldn't create a DKA Object: ". $response->Error()->Message());
 			} else if(!$response->MCM()->WasSuccess()) {
 				throw new RuntimeException("Couldn't create a DKA Object: ". $response->MCM()->Error()->Message());
+			} else if ($response->MCM()->TotalCount() != 1) {
+				throw new RuntimeException("Couldn't create a DKA Object .. No errors but no object created.");
 			}
 		} else {
 			printf("\tReusing CHAOS object with GUID = %s.\n", $results[0]->GUID);
@@ -445,15 +514,16 @@ class DFIIntoDKAHarvester {
 		$formatID = (int) $formatID;
 		// Check if it is on the $object's list of Files.
 		
-		// FIXME: Get is not implemented, so we cannot lookup the file.
+		// Get is not implemented, so we cannot lookup the file.
 		// But we can iterate over the objects files.
 		foreach($object->Files as $f) {
-			// TODO: Check on the $f->URL instead ...
+			// Consider to check on the $f->URL instead ...
 			$fileEquals =
 				$f->ParentID === $parentFileID &&
 				$f->FormatID === $formatID &&
 				$f->Filename === $filename &&
-				$f->OriginalFilename === $originalFilename;
+				$f->OriginalFilename === $originalFilename &&
+				strstr($f->URL, $folderPath); // This is because the $folderPath cannot be extracted directly from the CHAOS File record.
 			if($fileEquals) {
 				// A file has already been created.
 				if($printProgress) {
@@ -491,234 +561,43 @@ class DFIIntoDKAHarvester {
 	 * @throws Exception if $validateSchema is true and the validation fails.
 	 * @return DOMDocument Representing the DFI movie in the DKA Program specific schema.
 	 */
-	protected function generateXML($movieItem, $fileTypes, $validateSchema = false) {
-		
+	protected function generateXML($movieItem, $fileTypes) {
 		$result = array(
-			self::DKA_SCHEMA_NAME => new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>"),
-			self::DKA2_SCHEMA_NAME => new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>"),
-			self::DFI_SCHEMA_NAME => new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DFI></DFI>")
+			DKAXMLGenerator::SCHEMA_GUID => DKAXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), false),
+			DKA2XMLGenerator::SCHEMA_GUID => DKA2XMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), true),
+			DFIXMLGenerator::SCHEMA_GUID => DFIXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), true)
 		);
 		
-		
-		// DFI Schema
-		
-		$result[self::DKA_SCHEMA_NAME]->addChild("Title", $movieItem->Title);
-		
-		// TODO: Consider if this is the correct mapping.
-		$result[self::DKA_SCHEMA_NAME]->addChild("Abstract", $movieItem->Comment);
-		
-		$result[self::DKA_SCHEMA_NAME]->addChild("Description", $movieItem->Description);
-		
-		$result[self::DKA_SCHEMA_NAME]->addChild("Organization", self::DFI_ORGANIZATION_NAME);
-		
-		// TODO: Look into which types are needed for what.
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Type", implode(',', $fileTypes));
-		
-		// TODO: Determine if this is when the import happened or when the movie was created?
-		if(strlen($movieItem->ProductionYear) > 0) {
-			$result[self::DKA_SCHEMA_NAME]->addChild("CreatedDate", self::yearToXMLDate((string)$movieItem->ProductionYear));
-		}
-		
-		if(strlen($movieItem->ReleaseYear) > 0) {
-			$result[self::DKA_SCHEMA_NAME]->addChild("FirstPublishedDate", self::yearToXMLDate((string)$movieItem->ReleaseYear));
-		}
-		
-		// TODO: Make sure that this can infact be the DFI ID.
-		$result[self::DKA_SCHEMA_NAME]->addChild("Identifier", $movieItem->ID);
-		
-		$contributors = $result[self::DKA_SCHEMA_NAME]->addChild("Contributor");
-		foreach($movieItem->Credits->children() as $creditListItem) {
-			if($this->isContributor($creditListItem->Type)) {
-				$person = $contributors->addChild("Person");
-				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
-			}
-		}
-		
-		$creators = $result[self::DKA_SCHEMA_NAME]->addChild("Creator");
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:Credits/dfi:CreditListItem') as $creditListItem) {
-			if($this->isCreator($creditListItem->Type)) {
-				$person = $creators->addChild("Person");
-				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
-			}
-		}
-		
-		$format = trim($movieItem->Format);
-		if($format !== '') {
-			$result[self::DKA_SCHEMA_NAME]->addChild("TechnicalComment", "Format: ". $format);
-		}
-		
-		// TODO: Consider if the location is the shooting location or the production location.
-		$result[self::DKA_SCHEMA_NAME]->addChild("Location", $movieItem->CountryOfOrigin);
-		
-		$result[self::DKA_SCHEMA_NAME]->addChild("RightsDescription", self::RIGHTS_DESCIPTION);
-		
-		/* // Needs to be here if the validation should succeed.
-		$GeoData = $result->addChild("GeoData");
-		$GeoData->addChild("Latitude", "0.0");
-		$GeoData->addChild("Longitude", "0.0");
-		*/
-		
-		$Categories = $result[self::DKA_SCHEMA_NAME]->addChild("Categories");
-		$Categories->addChild("Category", $movieItem->Category);
-		
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
-			$Categories->addChild("Category", $subCategory);
-		}
-		
-		$Tags = $result[self::DKA_SCHEMA_NAME]->addChild("Tags");
-		$Tags->addChild("Tag", "DFI");
-		
-		// DFI2 Schema
-		
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Title", $movieItem->Title);
-		
-		// TODO: Consider if this is the correct mapping.
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Abstract", $movieItem->Comment);
-		
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Description", $movieItem->Description);
-		
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Organization", self::DFI_ORGANIZATION_NAME);
-		
-		// TODO: Look into which types are needed for what.
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Type", implode(',', $fileTypes));
-		
-		// TODO: Determine if this is when the import happened or when the movie was created?
-		if(strlen($movieItem->ProductionYear) > 0) {
-			$result[self::DKA2_SCHEMA_NAME]->addChild("CreatedDate", self::yearToXMLDate((string)$movieItem->ProductionYear));
-		}
-		
-		if(strlen($movieItem->ReleaseYear) > 0) {
-			$result[self::DKA2_SCHEMA_NAME]->addChild("FirstPublishedDate", self::yearToXMLDate((string)$movieItem->ReleaseYear));
-		}
-		
-		$contributors = $result[self::DKA2_SCHEMA_NAME]->addChild("Contributor");
-		foreach($movieItem->Credits->children() as $creditListItem) {
-			if($this->isContributor($creditListItem->Type)) {
-				$person = $contributors->addChild("Person");
-				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
-			}
-		}
-		
-		$creators = $result[self::DKA2_SCHEMA_NAME]->addChild("Creator");
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:Credits/dfi:CreditListItem') as $creditListItem) {
-			if($this->isCreator($creditListItem->Type)) {
-				$person = $creators->addChild("Person");
-				$person->addAttribute("Name", $creditListItem->Name);
-				$person->addAttribute("Role", self::translateCreditTypeToRole(strval($creditListItem->Type)));
-			}
-		}
-		
-		$format = trim($movieItem->Format);
-		if($format !== '') {
-			$result[self::DKA2_SCHEMA_NAME]->addChild("TechnicalComment", "Format: ". $format);
-		}
-		
-		// TODO: Consider if the location is the shooting location or the production location.
-		$result[self::DKA2_SCHEMA_NAME]->addChild("Location", $movieItem->CountryOfOrigin);
-		
-		$result[self::DKA2_SCHEMA_NAME]->addChild("RightsDescription", self::RIGHTS_DESCIPTION);
-		
-		$Categories = $result[self::DKA2_SCHEMA_NAME]->addChild("Categories");
-		$Categories->addChild("Category", $movieItem->Category);
-		
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
-			$Categories->addChild("Category", $subCategory);
-		}
-		
-		$Tags = $result[self::DKA2_SCHEMA_NAME]->addChild("Tags");
-		$Tags->addChild("Tag", "DFI");
-		
-		// DFI Schema
-		
-		$result[self::DFI_SCHEMA_NAME]->addChild("ID", $movieItem->ID);
-		
-		/* // Needs to be here if the validation should succeed.
-		$result->addChild("ProductionID");
-		
-		$result->addChild("StreamDuration");
-		*/
-		
-		$dom = array();
-		foreach($result as $name => $xml) {
-			$dom[$name] = dom_import_simplexml($xml)->ownerDocument;
-			$dom[$name]->formatOutput = true;
-		
-			if($validateSchema && !$dom->schemaValidateSource($this->_DKAMetadataSchema->SchemaXML)) {
-				throw new Exception("The XML generated does not validate with the schema.");
-			}
-		}
-		
-		return $dom;
-	}
-	
-	/**
-	 * Applies translation of different types of persons.
-	 * @param string $type The type to be translated.
-	 */
-	public static function translateCreditTypeToRole($type) {
-		$ROLE_TRANSLATIONS = array(); // Right now no translation is provided.
-		if(key_exists($type, $ROLE_TRANSLATIONS)) {
-			return $this->_roleTranslations[$type];
-		} else {
-			return $type;
-		}
-	}
-	
-	const CONTRIBUTOR = 0x01;
-	const CREATOR = 0x02;
-	/**
-	 * Devides the types known by DFI into Creator or Contributor known by a DKA Program.
-	 * @param string $type The type to be translated.
-	 * @return int Either the value of the CONTRIBUTOR or the CREATOR class constants.
-	 */
-	public static function translateCreditTypeToContributorOrCreator($type) {
-		switch ($type) {
-			case 'Director':
-				return self::CREATOR;
-			default:
-				return self::CONTRIBUTOR;
-		}
-	}
-	
-	/**
-	 * Checks if a type known by DFI is a Creator in the DKA Program notion.
-	 * @param string $type
-	 * @return boolean True if it should be treated as a creator, false otherwise.
-	 */
-	public static function isCreator($type) {
-		return self::translateCreditTypeToContributorOrCreator($type) == self::CREATOR;
-	}
-	
-	/**
-	 * Checks if a type known by DFI is a Contributor in the DKA Program notion.
-	 * @param string $type
-	 * @return boolean True if it should be treated as a contributor, false otherwise.
-	 */
-	public static function isContributor($type) {
-		return self::translateCreditTypeToContributorOrCreator($type) == self::CONTRIBUTOR;
+		return $result;
 	}
 	
 	// Helpers
 	
 	/**
-	 * Transforms a 4-digit year into an XML data YYYY-MM-DD format.
-	 * @param string $year The 4-digit representation of a year.
-	 * @throws InvalidArgumentException If this is not null, an empty string or a 4-digit string.
-	 * @return NULL|unknown|string The expected result, null or the empty string if this was the input argument.
+	 * Checks if this movie should be excluded from the harvest, because of censorship.
+	 * @param \dfi\model\MovieItem $movieItem A particular MovieItem from the DFI service, representing a particular movie.
+	 * @return bool True if this movie should be excluded, false otherwise.
 	 */
-	public static function yearToXMLDate($year) {
-		if($year === null) {
-			return null;
-		} elseif($year === '') {
-			return $year;
-		} elseif(strlen($year) === 4) {
-			return $year . '-01-01';
-		} else {
-			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4');
+	public static function shouldBeCensored($movieItem) {
+		foreach($movieItem->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
+			if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
+				return "The subcategory is $subCategory.";
+			}
 		}
+		return false;
+		/*
+		$censorship = strval($movieItem->Censorship);
+		switch ($censorship) {
+			case '':
+			case 'Tilladt for alle':
+			case 'Tilladt for børn over 12 år':
+				return false;
+			case 'Forbudt for børn under 16 år':
+			default:
+				return true;
+		}
+		*/
+		
 	}
 	
 	/**
@@ -728,6 +607,7 @@ class DFIIntoDKAHarvester {
 	 * @throws InvalidArgumentException If the argument is neither a string nor an array.
 	 * @return multitype:stdClass An array of CHAOS folders, as returned from the service.
 	 */
+	/*
 	protected function resolveFoldersOnPath($path, $parentId = null) {
 		if(is_string($path)) {
 			// Extract an array of non empty folder names on the path.
@@ -768,17 +648,16 @@ class DFIIntoDKAHarvester {
 			return null; // No subfolder had the correct name.
 		}
 	}
+	*/
 	
-	public static function extractMetadataRevisions($metadataSchemas, $object) {
+	/**
+	 * Extract the revisions for the metadata currently associated with the object.
+	 */
+	public static function extractMetadataRevisions($object) {
 		$result = array();
-		foreach($metadataSchemas as $schemaName => $schema) {
-			$result[$schemaName] = null;
-			foreach($object->Metadatas as $metadata) {
-				if($schema->GUID == $metadata->MetadataSchemaGUID) {
-					// The schema matches the metadata.
-					$result[$schemaName] = $metadata->RevisionID;
-				}
-			}
+		foreach($object->Metadatas as $metadata) {
+			// The schema matches the metadata.
+			$result[strtolower($metadata->MetadataSchemaGUID)] = $metadata->RevisionID;
 		}
 		return $result;
 	}
@@ -859,9 +738,7 @@ class DFIIntoDKAHarvester {
 		$this->CHAOS_authenticateSession();
 		$this->CHAOS_fetchMetadataSchemas();
 		$this->CHAOS_fetchDKAObjectType();
-// 		$this->CHAOS_fetchDKAImageFormat();
-// 		$this->CHAOS_fetchDKAVideoFormat();
-		$this->CHAOS_fetchDFIFolder();
+		//$this->CHAOS_fetchDFIFolder();
 	}
 	
 	/**
@@ -885,6 +762,12 @@ class DFIIntoDKAHarvester {
 	 */
 	protected function CHAOS_fetchMetadataSchemas() {
 		printf("Looking up the DKA metadata schema GUID: ");
+		
+		DKAXMLGenerator::instance()->fetchSchema($this->_chaos);
+		DKA2XMLGenerator::instance()->fetchSchema($this->_chaos);
+		DFIXMLGenerator::instance()->fetchSchema($this->_chaos);
+		
+		/*
 		$result = $this->_chaos->MetadataSchema()->Get();
 		if(!$result->WasSuccess()) {
 			printf("Failed.\n");
@@ -908,6 +791,7 @@ class DFIIntoDKAHarvester {
 				throw new RuntimeException("Couldn't find the '$n' metadata schema.");
 			}
 		}
+		*/
 		printf("Succeeded.\n");
 	}
 	
@@ -965,6 +849,7 @@ class DFIIntoDKAHarvester {
 	 * based on the DFI_FOLDER const. This is stores in the _DFIFolder field.
 	 * @throws RuntimeException If it fails.
 	 */
+	/*
 	protected function CHAOS_fetchDFIFolder() {
 		$this->_DFIFolder = null;
 		
@@ -981,6 +866,7 @@ class DFIIntoDKAHarvester {
 			printf("Succeeded, it has ID: %s\n", $this->_DFIFolder->ID);
 		}
 	}
+	*/
 	
 	// DFI specific methods.
 	
@@ -1001,4 +887,4 @@ class DFIIntoDKAHarvester {
 }
 
 // Call the main method of the class.
-DFIIntoDKAHarvester::main();
+DFIIntoDKAHarvester::main($_SERVER['argv']);
