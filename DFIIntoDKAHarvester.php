@@ -285,12 +285,15 @@ class DFIIntoDKAHarvester {
 		printf("done .. took %ums\n", round($elapsed));
 		
 		printf("Iterating over every movie.\n");
+		$retrying = false;
 		for($i = 0; $i < count($movies); $i++) {
 			try {
 				$m = $movies[$i];
 				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
 				$start = microtime(true);
+				
 				$this->processMovie($m->Ref);
+				
 				$elapsed = (microtime(true) - $start) * 1000.0;
 				printf("Completed the processing .. took %ums\n", round($elapsed));
 			} catch (RuntimeException $e) {
@@ -298,13 +301,29 @@ class DFIIntoDKAHarvester {
 					printf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
 					// Reauthenticate!
 					$this->CHAOS_initialize();
-					// Retry
-					$i--;
-					continue;
+					if($retrying) {
+						throw new RuntimeException("Retryed but failed: "+$e->getMessage());
+					} else {
+						// Retry
+						$retrying = true;
+						$i--;
+						continue;
+					}
 				} else {
 					throw $e;
 				}
+			} catch (Exception $e) {
+				if($retrying) {
+					throw new RuntimeException("Retryed but failed: "+$e->getMessage());
+				} else {
+					// Retry
+					$retrying = true;
+					$i--;
+					continue;
+				}
 			}
+			// Reset the resetting flag.
+			$retrying = false;
 		}
 	}
 	
@@ -494,14 +513,16 @@ class DFIIntoDKAHarvester {
 		if($response->MCM()->TotalCount() == 0) {
 			printf("\tFound a film in the DFI service which is not already represented by a CHAOS object.\n");
 			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSDFIFolderID);
-			$results = $response->MCM()->Results();
-			if(!$response->WasSuccess()) {
+			if($response == null) {
+				throw new RuntimeException("Couldn't create a DKA Object: response object was null.");
+			} else if(!$response->WasSuccess()) {
 				throw new RuntimeException("Couldn't create a DKA Object: ". $response->Error()->Message());
 			} else if(!$response->MCM()->WasSuccess()) {
 				throw new RuntimeException("Couldn't create a DKA Object: ". $response->MCM()->Error()->Message());
 			} else if ($response->MCM()->TotalCount() != 1) {
 				throw new RuntimeException("Couldn't create a DKA Object .. No errors but no object created.");
 			}
+			$results = $response->MCM()->Results();
 		} else {
 			printf("\tReusing CHAOS object with GUID = %s.\n", $results[0]->GUID);
 		}
