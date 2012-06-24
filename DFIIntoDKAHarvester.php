@@ -68,7 +68,7 @@ class DFIIntoDKAHarvester {
 		
 		$runtimeOptions = self::extractOptionsFromArguments($args);
 		
-		$start = time();
+		$starttime = time();
 		try {
 			$h = new DFIIntoDKAHarvester();
 			if(array_key_exists('range', $runtimeOptions)) {
@@ -84,8 +84,8 @@ class DFIIntoDKAHarvester {
 				} else {
 					throw new InvalidArgumentException("Given a range parameter was malformed.");
 				}
-			} elseif(array_key_exists('single', $runtimeOptions)) {
-				$dfiID = intval($runtimeOptions['single']);
+			} elseif(array_key_exists('single-id', $runtimeOptions)) {
+				$dfiID = intval($runtimeOptions['single-id']);
 				printf("Updating a single DFI record (#%u).\n", $dfiID);
 				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID);
 				printf("Done.\n", $dfiID);
@@ -109,7 +109,7 @@ class DFIIntoDKAHarvester {
 			printf("Error occured in the harvester implementation: %s\n", $e);
 			exit;
 		}
-		$elapsed = time() - $start;
+		$elapsed = time() - $starttime;
 		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
 	}
 	
@@ -138,7 +138,7 @@ class DFIIntoDKAHarvester {
 	}
 	
 	protected static function printUsage($args) {
-		printf("Usage:\n\t%s [--all|--single={dfi-id}|--range={start-row}-{end-row}]\n", $args[0]);
+		printf("Usage:\n\t%s [--all|--single-id={dfi-id}|--range={start-row}-{end-row}]\n", $args[0]);
 	}
 	
 	/**
@@ -284,11 +284,13 @@ class DFIIntoDKAHarvester {
 		$elapsed = (microtime(true) - $start) * 1000.0;
 		printf("done .. took %ums\n", round($elapsed));
 		
+		$failures = array();
+		
+		$attempts = 0;
 		printf("Iterating over every movie.\n");
-		$retrying = false;
 		for($i = 0; $i < count($movies); $i++) {
+			$m = $movies[$i];
 			try {
-				$m = $movies[$i];
 				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
 				$start = microtime(true);
 				
@@ -296,34 +298,35 @@ class DFIIntoDKAHarvester {
 				
 				$elapsed = (microtime(true) - $start) * 1000.0;
 				printf("Completed the processing .. took %ums\n", round($elapsed));
-			} catch (RuntimeException $e) {
+			} catch (Exception $e) {
+				$attempts++;
+				// Initialize CHAOS if the session expired.
 				if(strstr($e->getMessage(), 'Session has expired') !== false) {
 					printf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
 					// Reauthenticate!
 					$this->CHAOS_initialize();
-					if($retrying) {
-						throw new RuntimeException("Retryed but failed: "+$e->getMessage());
-					} else {
-						// Retry
-						$retrying = true;
-						$i--;
-						continue;
-					}
 				} else {
-					throw $e;
+					printf("[!] An error occured: %s.\n", $e->getMessage());
 				}
-			} catch (Exception $e) {
-				if($retrying) {
-					throw new RuntimeException("Retryed but failed: "+$e->getMessage());
+				
+				if($attempts > 2) {
+					$failures[] = array("movie" => $m, "exception" => $e);
+					// Reset
+					$attempts = 0;
 				} else {
 					// Retry
-					$retrying = true;
 					$i--;
-					continue;
 				}
+				continue;
 			}
-			// Reset the resetting flag.
-			$retrying = false;
+		}
+		if(count($failures) == 0) {
+			printf("Done .. no failures occurred.\n");
+		} else {
+			printf("Done .. %u failures occurred:\n", count($failures));
+			foreach ($failures as $failure) {
+				printf("\t\"%s\" (%u): %s\n", $failure["movie"]->Name, $failure["movie"]->ID, $failure["exception"]->getMessage());
+			}
 		}
 	}
 	
@@ -336,8 +339,7 @@ class DFIIntoDKAHarvester {
 	public function processMovie($reference) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
 		if($movieItem === false) {
-			printf("\tSkipping this movie, as the reference didn't point to valid XML: '%s'\n", $reference);
-			return;
+			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
 		}
 		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
 		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
