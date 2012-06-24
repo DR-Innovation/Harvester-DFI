@@ -335,9 +335,13 @@ class DFIIntoDKAHarvester {
 	 */
 	public function processMovie($reference) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
+		if($movieItem === false) {
+			printf("\tSkipping this movie, as the reference didn't point to valid XML: '%s'\n", $reference);
+			return;
+		}
 		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
 		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
-		
+
 		$shouldBeCensored = self::shouldBeCensored($movieItem);
 		if($shouldBeCensored !== false) {
 			printf("\tSkipping this movie, as it contains material that should be censored: '%s'\n", $shouldBeCensored);
