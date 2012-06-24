@@ -57,8 +57,6 @@ class DFIIntoDKAHarvester {
 	//const DKA_XML_REVISION = 1; // Used when overwriting older versions of Metadata XML on a CHAOS object.
 	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
 	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
-	const DFI_IMAGE_SCANPIX_BASE_PATH = 'http://www2.scanpix.eu/';
-	const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 	
 	/**
 	 * Main method of the harvester, call this once.
@@ -357,13 +355,14 @@ class DFIIntoDKAHarvester {
 		// We create a list of files that have been processed and reused.
 		$object->ProcessedFiles = array();
 		
-		$imagesProcessed = $this->processMovieImages($object, $movieItem);
-		$videosProcessed = $this->processMovieVideos($object, $movieItem);
+		$imagesProcessed = DFIImageExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
+		$videosProcessed = DFIVideoExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
+		
 		$types = array();
-		if($imagesProcessed > 0) {
+		if(count($imagesProcessed) > 0) {
 			$types[] = "Picture";
 		}
-		if($videosProcessed > 0) {
+		if(count($videosProcessed) > 0) {
 			$types[] = "Video";
 		}
 		
@@ -393,98 +392,6 @@ class DFIIntoDKAHarvester {
 				printf("Succeeded.\n");
 			}
 		}
-	}
-	
-	/**
-	 * Process all the images associated with a movie from the DFI service.
-	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the images should be added to.
-	 * @param \dfi\model\MovieItem $movieItem The DFI MovieItem from which the images should be extracted.
-	 */
-	public function processMovieImages($object, $movieItem) {
-		$imagesProcessed = 0;
-		$urlBase = self::DFI_IMAGE_SCANPIX_BASE_PATH;
-		
-		$imagesRef = strval($movieItem->Images);
-		if ($imagesRef == null || $imagesRef === '') {
-			printf("\tFound no reference to images:\tDone\n");
-			return;
-		}
-		$images = $this->_dfi->load($imagesRef);
-		
-		printf("\tUpdating files for %u images:\t", count($images->PictureItem));
-		//$this->resetProgress(count($images->PictureItem));
-		//$progress = 0;
-		echo self::PROGRESS_END_CHAR;
-		
-		foreach($images->PictureItem as $i) {
-			//$this->updateProgress($progress++);
-			// The following line is needed as they forget to set their encoding.
-			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
-			//echo "\$caption = $caption\n";
-			//printf("\tFound an image with the caption '%s'.\n", $i->Caption);
-			$imageURLS = array(
-					(string)$i->SrcMini => (integer)$this->_CHAOSImageFormatID,
-					(string)$i->SrcThumb => (integer)$this->_CHAOSThumbnailImageFormatID);
-			
-			foreach($imageURLS as $url => $formatId) {
-				$filenameMatches = array();
-				if(preg_match("#$urlBase(.*)#", $url, $filenameMatches) === 1) {
-					$pathinfo = pathinfo($filenameMatches[1]);
-					$response = $this->getOrCreateFile($object, null, $formatId, $this->_CHAOSImageDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
-					
-					if($response == null) {
-						throw new RuntimeException("Failed to create an image file.");
-					} else {
-						$object->ProcessedFiles[] = $response;
-						$imagesProcessed++;
-					}
-				} else {
-					printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
-				}
-			}
-		}
-		echo self::PROGRESS_END_CHAR;
-		
-		printf(" Done\n");
-		return $imagesProcessed;
-	}
-	
-	/**
-	 * Process all the movieclips associated with a movie from the DFI service.
-	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the movies should be added to.
-	 * @param \dfi\model\MovieItem $movieItem The DFI MovieItem from which the movies should be extracted.
-	 */
-	public function processMovieVideos($object, $movieItem) {
-		$videosProcessed = 0;
-		$urlBase = self::DFI_VIDEO_BASE;
-		
-		$movies = $movieItem->xpath("/dfi:MovieItem/dfi:FlashMovies/dfi:FlashMovieItem");
-		
-		printf("\tUpdating files for %u videos:\t", count($movies));
-		
-		echo self::PROGRESS_END_CHAR;
-		foreach($movies as $m) {
-			// The following line is needed as they forget to set their encoding.
-			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
-			
-			$miniFilenameMatches = array();
-			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $miniFilenameMatches) === 1) {
-				$pathinfo = pathinfo($miniFilenameMatches[1]);
-				$response = $this->getOrCreateFile($object, null, $this->_CHAOSVideoFormatID, $this->_CHAOSVideoDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
-				if($response == null) {
-					throw new RuntimeException("Failed to create a video file.");
-				} else {
-					$object->ProcessedFiles[] = $response;
-					$videosProcessed++;
-				}
-			} else {
-				printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
-			}
-		}
-		echo self::PROGRESS_END_CHAR;
-		printf(" Done\n");
-		
-		return $videosProcessed;
 	}
 	
 	/**
@@ -534,64 +441,6 @@ class DFIIntoDKAHarvester {
 		}
 		
 		return $results[0];
-	}
-	
-	/**
-	 * Gets or creates a new file reference.
-	 * If the file is already present on the system it simply returns the file.
-	 * NB: This is not correctly implemented yet, it will simply create a new file no matter what.
-	 * This is due to the state of the CHAOS PHP clients implementation state.
-	 * @param stdClass $objectGUID
-	 * @param int|null $parentFileID The FileID of an original file this file was created from, otherwise null.
-	 * @param int $formatID
-	 * @param int $destinationID
-	 * @param string $filename
-	 * @param string $originalFilename
-	 * @param string $folderPath
-	 * @return \CHAOS\Portal\Client\Data\ServiceResult
-	 */
-	protected function getOrCreateFile($object, $parentFileID, $formatID, $destinationID, $filename, $originalFilename, $folderPath, $printProgress = true) {
-		$formatID = (int) $formatID;
-		// Check if it is on the $object's list of Files.
-		
-		// Get is not implemented, so we cannot lookup the file.
-		// But we can iterate over the objects files.
-		foreach($object->Files as $f) {
-			// Consider to check on the $f->URL instead ...
-			$fileEquals =
-				$f->ParentID === $parentFileID &&
-				$f->FormatID === $formatID &&
-				$f->Filename === $filename &&
-				$f->OriginalFilename === $originalFilename &&
-				strstr($f->URL, $folderPath); // This is because the $folderPath cannot be extracted directly from the CHAOS File record.
-			if($fileEquals) {
-				// A file has already been created.
-				if($printProgress) {
-					echo ".";
-				}
-				return $f;
-			}
-		}
-		
-		// File is not known to the CHAOS system, creating it.
-		$response = $this->_chaos->File()->Create($object->GUID, $parentFileID, $formatID, $destinationID, $filename, $originalFilename, $folderPath);
-		if(!$response->WasSuccess()) {
-			if($printProgress) {
-				echo "!";
-			}
-			throw new RuntimeException("Failed to create the file in the CHAOS service: ". $response->Error()->Message());
-		} elseif (!$response->MCM()->WasSuccess()) {
-			if($printProgress) {
-				echo "!";
-			}
-			throw new RuntimeException("Failed to create the file in the CHAOS service: ". $response->MCM()->Error()->Message());
-		} else {
-			if($printProgress) {
-				echo "+";
-			}
-			$results = $response->MCM()->Results();
-			return $results[0];
-		}
 	}
 	
 	/**
@@ -779,6 +628,12 @@ class DFIIntoDKAHarvester {
 		$this->CHAOS_fetchMetadataSchemas();
 		$this->CHAOS_fetchDKAObjectType();
 		//$this->CHAOS_fetchDFIFolder();
+		
+		DFIImageExtractor::instance()->_CHAOSImageDestinationID = $this->_CHAOSImageDestinationID;
+		DFIImageExtractor::instance()->_CHAOSImageFormatID = $this->_CHAOSImageFormatID;
+		DFIImageExtractor::instance()->_CHAOSThumbnailImageFormatID = $this->_CHAOSThumbnailImageFormatID;
+		DFIVideoExtractor::instance()->_CHAOSVideoDestinationID = $this->_CHAOSVideoDestinationID;
+		DFIVideoExtractor::instance()->_CHAOSVideoFormatID = $this->_CHAOSVideoFormatID;
 	}
 	
 	/**
