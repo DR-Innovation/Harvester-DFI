@@ -44,7 +44,7 @@ use dfi\DFIClient;
  * @link       https://github.com/CHAOS-Community/Harvester-DFI
  * @since      Class available since Release 0.1
  */
-class DFIIntoDKAHarvester {
+class DFIIntoDKAHarvester extends AHarvester {
 	
 	const VERSION = "0.1";
 	const DKA_SCHEMA_NAME = "DKA";
@@ -124,30 +124,6 @@ class DFIIntoDKAHarvester {
 		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
 	}
 	
-	protected static function extractOptionsFromArguments($args) {
-		$result = array();
-		for($i = 0; $i < count($args); $i++) {
-			if(strpos($args[$i], '--') === 0) {
-				$equalsIndex = strpos($args[$i], '=');
-				if($equalsIndex === false) {
-					$name = substr($args[$i], 2);
-					$result[$name] = true;
-				} else {
-					$name = substr($args[$i], 2, $equalsIndex-2);
-					$value = substr($args[$i], $equalsIndex+1);
-					if($value == 'true') {
-						$result[$name] = true;
-					} elseif($value == 'false') {
-						$result[$name] = false;
-					} else {
-						$result[$name] = $value;
-					}
-				}
-			}
-		}
-		return $result;
-	}
-	
 	protected static function printUsage($args) {
 		printf("Usage:\n\t%s [--all|--single-id={dfi-id}|--range={start-row}-{end-row}] [--publish={access-point-guid}|--just-publish={access-point-guid}]\n", $args[0]);
 	}
@@ -172,7 +148,6 @@ class DFIIntoDKAHarvester {
 	 * if the CHAOS credentials provided fails to authenticate the session.
 	 */
 	public function __construct() {
-		$url = "";
 		$this->loadConfiguration();
 		
 		$this->CHAOS_initialize();
@@ -260,37 +235,13 @@ class DFIIntoDKAHarvester {
 	);
 	
 	/**
-	 * Load the configuration parameters from the string[] argument provided.
-	 * @param array[string]string $config An (optional) associative array holding the array
-	 * of configuration parameters, defaults to the $_SERVER array.
-	 * @throws RuntimeException if an expected environment variable is not sat.
-	 * @throws Exception if the CONFIGURATION_PARAMETERS holds a value which is
-	 * not a member of the class. This should not be possible.
-	 */
-	public function loadConfiguration($config = null) {
-		if($config == null) {
-			$config = $_SERVER; // Default to the server array.
-		}
-		$this_class = get_class($this);
-		foreach($this->_CONFIGURATION_PARAMETERS as $param => $fieldName) {
-			if(!key_exists($param, $config)) {
-				throw new RuntimeException("The environment variable $param is not sat.");
-			} elseif (!property_exists($this_class, $fieldName)) {
-				throw new Exception("CONFIGURATION_PARAMETERS contains a value ($fieldName) for a param ($param) which is not a property for the class ($this_class).");
-			} else {
-				$this->$fieldName = $config[$param];
-			}
-		}
-	}
-	
-	/**
 	 * Fetch and process all advailable DFI movies.
 	 * This method calls fetchAllMovies on the 
 	 * @param int $delay A non-negative integer specifing the amount of micro seconds to sleep between each call to the API when fetching movies, use this to do a slow fetch.
 	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
 	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 */
-	public function processMovies($offset = 0, $count = null, $delay = 0, $publishAccessPointGUID = false, $skipProcessing = false) {
+	public function processMovies($offset = 0, $count = null, $delay = 0, $publishAccessPointGUID = null, $skipProcessing = false) {
 		printf("Fetching ids for all movies: ");
 		$start = microtime(true);
 		
@@ -328,7 +279,7 @@ class DFIIntoDKAHarvester {
 					$failures[] = array("movie" => $m, "exception" => $e);
 					// Reset
 					$attempts = 0;
-				} else {
+				} else {http://api.test.chaos-systems.com/Object/G
 					// Retry
 					$i--;
 				}
@@ -353,12 +304,12 @@ class DFIIntoDKAHarvester {
 	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
 	 * this will most likely happen if the service is broken, or in lack of permissions.
 	 */
-	public function processMovie($reference, $publishAccessPointGUID = false, $skipProcessing = false) {
+	public function processMovie($reference, $publishAccessPointGUID = null, $skipProcessing = false) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
 		if($movieItem === false) {
 			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
 		}
-		$movieItem->registerXPathNamespace('dfi', 'http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items');
+		$movieItem->registerXPathNamespace('dfi', 'http://schemas.http://api.test.chaos-systems.com/Object/Gdatacontract.org/2004/07/Netmester.DFI.RestService.Items');
 		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
 
 		$shouldBeCensored = self::shouldBeCensored($movieItem);
@@ -414,7 +365,7 @@ class DFIIntoDKAHarvester {
 			}
 		}
 		
-		if($publishAccessPointGUID !== false) {
+		if($publishAccessPointGUID !== null) {
 			$now = new DateTime();
 			printf("\tChanging the publish settings to: GUID = %s and startDate = %s: ", $publishAccessPointGUID, $now->format("Y-m-d H:i:s"));
 			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $publishAccessPointGUID, $now);
@@ -443,6 +394,7 @@ class DFIIntoDKAHarvester {
 		// Query for a CHAOS Object that represents the DFI movie.
 		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
 		//printf("Solr query: %s\n", $query);
+		//$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
 		$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
 		//$response = $this->_chaos->Object()->Get("(FolderTree:$folderId AND ObjectTypeID:$objectTypeId)", "DateCreated+desc", null, 0, 100, true, true);
 		
@@ -519,53 +471,6 @@ class DFIIntoDKAHarvester {
 			$result[strtolower($metadata->MetadataSchemaGUID)] = $metadata->RevisionID;
 		}
 		return $result;
-	}
-	
-	public static function extractFileTypes($movieItem) {
-		$result = array();
-		if(count($movieItem->FlashMovies) > 0) {
-			$result[] = "Video";
-		}
-		if(count($movieItem->Images) > 0) {
-			$result[] = "Video";
-		}
-		exit;
-	}
-	
-	protected $progressTotal;
-	protected $progressWidth;
-	protected $progressDotsPrinted;
-	const PROGRESS_DOT_CHAR = '-';
-	const PROGRESS_END_CHAR = '|';
-	
-	public function resetProgress($total, $width = 30) {
-		if($total > 0) {
-			$this->progressTotal = $total;
-			$this->progressWidth = $width;
-			$this->progressDotsPrinted = 0;
-			echo self::PROGRESS_END_CHAR;
-		} else {
-			// Reset ...
-			$this->progressTotal = 0;
-			updateProgress(0);
-		}
-	}
-	
-	public function updateProgress($value) {
-		if($this->progressTotal <= 1 && $value == 0) {
-			$ratioDone = 1;
-		} else {
-			$ratioDone = $value / ($this->progressTotal - 1);
-		}
-		$dots = (int) round( $ratioDone * $this->progressWidth);
-		//printf("updateProgress(\$value = %s) ~ \$dots = %u\n", $value, $dots);
-		while($this->progressDotsPrinted < $dots) {
-			echo self::PROGRESS_DOT_CHAR;
-			$this->progressDotsPrinted++;
-		}
-		if($dots >= $this->progressWidth) {
-			echo self::PROGRESS_END_CHAR;
-		}
 	}
 	
 	// CHAOS specific methods

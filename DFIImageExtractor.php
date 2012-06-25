@@ -22,7 +22,7 @@ class DFIImageExtractor extends CHAOSFileExtractor {
 		
 		printf("\tUpdating the file for the main (thumbnail) image: ");
 		// Update the thumbnail.
-		$mainImage = $movieItem->xpath("/dfi:MovieItem/dfi:MainImage/dfi:SrcMini");
+		$mainImage = $movieItem->MainImage->SrcMini;
 		$filenameMatches = array();
 		if(count($mainImage) > 0 && preg_match("#$urlBase(.*)#", $mainImage[0], $filenameMatches) === 1) {
 			$pathinfo = pathinfo($filenameMatches[1]);
@@ -34,9 +34,10 @@ class DFIImageExtractor extends CHAOSFileExtractor {
 				$object->ProcessedFiles[] = $response;
 				$imagesProcessed[] = $response;
 			}
+		} else {
+			printf("no main image detected:");
 		}
 		printf(" Done.\n");
-		
 		
 		$imagesRef = strval($movieItem->Images);
 		if ($imagesRef == null || $imagesRef === '') {
@@ -56,25 +57,36 @@ class DFIImageExtractor extends CHAOSFileExtractor {
 			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
 			//echo "\$caption = $caption\n";
 			//printf("\tFound an image with the caption '%s'.\n", $i->Caption);
-			$imageURLS = array(
-					(string)$i->SrcMini => (integer)$this->_CHAOSImageFormatID,
-					(string)$i->SrcThumb => (integer)$this->_CHAOSLowResImageFormatID);
-				
-			foreach($imageURLS as $url => $formatId) {
-				$filenameMatches = array();
-				if(preg_match("#$urlBase(.*)#", $url, $filenameMatches) === 1) {
-					$pathinfo = pathinfo($filenameMatches[1]);
-					$response = $this->getOrCreateFile($chaosClient, $object, null, $formatId, $this->_CHAOSImageDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
-						
-					if($response == null) {
-						throw new RuntimeException("Failed to create an image file.");
-					} else {
-						$object->ProcessedFiles[] = $response;
-						$imagesProcessed[] = $response;
-					}
+			$miniImageID = null;
+			$filenameMatches = array();
+			if(preg_match("#$urlBase(.*)#", $i->SrcMini, $filenameMatches) === 1) {
+				$pathinfo = pathinfo($filenameMatches[1]);
+				$response = $this->getOrCreateFile($chaosClient, $object, null, $this->_CHAOSImageFormatID, $this->_CHAOSImageDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
+			
+				if($response == null) {
+					throw new RuntimeException("Failed to create an image file.");
 				} else {
-					printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
+					$object->ProcessedFiles[] = $response;
+					$imagesProcessed[] = $response;
+					$miniImageID = $response->ID;
 				}
+			} else {
+				printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
+			}
+			
+			$filenameMatches = array();
+			if(preg_match("#$urlBase(.*)#", $i->SrcThumb, $filenameMatches) === 1) {
+				$pathinfo = pathinfo($filenameMatches[1]);
+				$response = $this->getOrCreateFile($chaosClient, $object, $miniImageID, $this->_CHAOSLowResImageFormatID, $this->_CHAOSImageDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
+					
+				if($response == null) {
+					throw new RuntimeException("Failed to create an image file.");
+				} else {
+					$object->ProcessedFiles[] = $response;
+					$imagesProcessed[] = $response;
+				}
+			} else {
+				printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
 			}
 		}
 		echo self::PROGRESS_END_CHAR;
