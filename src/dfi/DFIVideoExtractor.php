@@ -19,7 +19,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 		$videosProcessed = array();
 		$urlBase = self::DFI_VIDEO_BASE;
 		
-		$movies = $movieItem->FlashMovies;
+		$movies = $movieItem->FlashMovies->FlashMovieItem;
 		
 		printf("\tUpdating files for %u videos:\t", count($movies));
 		
@@ -29,7 +29,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
 			
 			$miniFilenameMatches = array();
-			if(preg_match("#$urlBase(.*)#", $m->FlashMovieItem->FilmUrl, $miniFilenameMatches) === 1) {
+			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $miniFilenameMatches) === 1) {
 				$pathinfo = pathinfo($miniFilenameMatches[1]);
 				$response = $this->getOrCreateFile($chaosClient, $object, null, $this->_CHAOSVideoFormatID, $this->_CHAOSVideoDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
 				if($response == null) {
