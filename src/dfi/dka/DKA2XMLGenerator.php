@@ -1,4 +1,5 @@
 <?php
+namespace dfi\dka;
 class DKA2XMLGenerator extends DKAXMLGenerator {
 	const SCHEMA_NAME = 'DKA2';
 	const SCHEMA_GUID = '5906a41b-feae-48db-bfb7-714b3e105396';
@@ -22,7 +23,7 @@ class DKA2XMLGenerator extends DKAXMLGenerator {
 	public function generateXML($input, $validate = false) {
 		$movieItem = $input['movieItem'];
 		$fileTypes = $input['fileTypes'];
-		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
+		$result = new \SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));
 		
@@ -35,7 +36,7 @@ class DKA2XMLGenerator extends DKAXMLGenerator {
 		}
 		$result->addChild("Description", $decription);
 		
-		$result->addChild("Organization", DFIIntoDKAHarvester::DFI_ORGANIZATION_NAME);
+		$result->addChild("Organization", \DFIIntoDKAHarvester::DFI_ORGANIZATION_NAME);
 		
 		if(strlen($movieItem->Url) > 0) {
 			$result->addChild("ExternalURL", htmlspecialchars($movieItem->Url));
@@ -89,7 +90,7 @@ class DKA2XMLGenerator extends DKAXMLGenerator {
 		// TODO: Consider if the location is the shooting location or the production location.
 		$result->addChild("Location", htmlspecialchars($movieItem->CountryOfOrigin));
 		
-		$result->addChild("RightsDescription", DFIIntoDKAHarvester::RIGHTS_DESCIPTION);
+		$result->addChild("RightsDescription", \DFIIntoDKAHarvester::RIGHTS_DESCIPTION);
 		
 		$Categories = $result->addChild("Categories");
 		$Categories->addChild("Category", htmlspecialchars($movieItem->Category));

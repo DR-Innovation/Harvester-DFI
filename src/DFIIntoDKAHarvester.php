@@ -38,6 +38,11 @@ spl_autoload_register("CaseSensitiveAutoload");
 use CHAOS\Portal\Client\PortalClient;
 use dfi\model\MovieItem;
 use dfi\DFIClient;
+use dfi\dka\DKAXMLGenerator;
+use dfi\dka\DKA2XMLGenerator;
+use dfi\DFIXMLGenerator;
+use dfi\DFIImageExtractor;
+use dfi\DFIVideoExtractor;
 
 /**
  * Main class of the DFI Harvester.
@@ -443,7 +448,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 		$result = array(
 			DKAXMLGenerator::SCHEMA_GUID => DKAXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), false),
 			DKA2XMLGenerator::SCHEMA_GUID => DKA2XMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), true),
-			DFIXMLGenerator::SCHEMA_GUID => DFIXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), true)
+			DFIXMLGenerator::SCHEMA_GUID => DFIXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem), true)
 		);
 		
 		return $result;

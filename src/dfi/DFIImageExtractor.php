@@ -1,5 +1,6 @@
 <?php
-class DFIImageExtractor extends CHAOSFileExtractor {
+namespace dfi;
+class DFIImageExtractor extends \CHAOSFileExtractor {
 	const DFI_IMAGE_SCANPIX_BASE_PATH = 'http://www2.scanpix.eu/';
 	
 	public $_CHAOSImageFormatID;

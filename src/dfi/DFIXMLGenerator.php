@@ -1,5 +1,6 @@
 <?php
-class DFIXMLGenerator extends CHAOSXMLGenerator {
+namespace dfi;
+class DFIXMLGenerator extends \CHAOSXMLGenerator {
 	const SCHEMA_NAME = 'DKA.DFI';
 	const SCHEMA_GUID = 'd361328e-4fd2-4cb1-a2b4-37ecc7679a6e';
 	
@@ -13,7 +14,7 @@ class DFIXMLGenerator extends CHAOSXMLGenerator {
 	 */
 	public function generateXML($input, $validate = false) {
 		$movieItem = $input['movieItem'];
-		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DFI xmlns:dfi='http://www.example.org/DKA.DFI'></DFI>");
+		$result = new \SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DFI xmlns:dfi='http://www.example.org/DKA.DFI'></DFI>");
 		
 		$result->addChild("ID", intval($movieItem->ID));
 		

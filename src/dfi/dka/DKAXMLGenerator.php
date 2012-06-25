@@ -1,5 +1,6 @@
 <?php
-class DKAXMLGenerator extends CHAOSXMLGenerator {
+namespace dfi\dka;
+class DKAXMLGenerator extends \CHAOSXMLGenerator {
 	const SCHEMA_NAME = 'DKA';
 	const SCHEMA_GUID = '00000000-0000-0000-0000-000063c30000';
 	
@@ -22,7 +23,7 @@ class DKAXMLGenerator extends CHAOSXMLGenerator {
 	public function generateXML($input, $validate = false) {
 		$movieItem = $input["movieItem"];
 		$fileTypes = $input["fileTypes"];
-		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
+		$result = new \SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 		
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));
 		
@@ -35,7 +36,7 @@ class DKAXMLGenerator extends CHAOSXMLGenerator {
 		}
 		$result->addChild("Description", $decription);
 		
-		$result->addChild("Organization", DFIIntoDKAHarvester::DFI_ORGANIZATION_NAME);
+		$result->addChild("Organization", \DFIIntoDKAHarvester::DFI_ORGANIZATION_NAME);
 		
 		// TODO: Look into which types are needed for what.
 		$result->addChild("Type", implode(',', $fileTypes));
@@ -77,7 +78,7 @@ class DKAXMLGenerator extends CHAOSXMLGenerator {
 		// TODO: Consider if the location is the shooting location or the production location.
 		$result->addChild("Location", htmlspecialchars($movieItem->CountryOfOrigin));
 		
-		$result->addChild("RightsDescription", DFIIntoDKAHarvester::RIGHTS_DESCIPTION);
+		$result->addChild("RightsDescription", \DFIIntoDKAHarvester::RIGHTS_DESCIPTION);
 		
 		/* // Needs to be here if the validation should succeed.
 		 $GeoData = $result->addChild("GeoData");

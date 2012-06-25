@@ -1,5 +1,6 @@
 <?php
-class DFIVideoExtractor extends CHAOSFileExtractor {
+namespace dfi;
+class DFIVideoExtractor extends \CHAOSFileExtractor {
 	const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 	
 	public $_CHAOSVideoFormatID;
