@@ -1,5 +1,5 @@
 <?php
-namespace dfi;
+namespace dfi\dka;
 class DFIXMLGenerator extends \CHAOSXMLGenerator {
 	const SCHEMA_NAME = 'DKA.DFI';
 	const SCHEMA_GUID = 'd361328e-4fd2-4cb1-a2b4-37ecc7679a6e';

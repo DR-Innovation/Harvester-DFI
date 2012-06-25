@@ -4,7 +4,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 	const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 	
 	public $_CHAOSVideoFormatID;
-	public $CHAOSVideoDestinationID;
+	public $_CHAOSVideoDestinationID;
 	
 	public static $singleton;
 	/**
@@ -19,7 +19,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 		$videosProcessed = array();
 		$urlBase = self::DFI_VIDEO_BASE;
 		
-		$movies = $movieItem->xpath("/dfi:MovieItem/dfi:FlashMovies/dfi:FlashMovieItem");
+		$movies = $movieItem->FlashMovies;
 		
 		printf("\tUpdating files for %u videos:\t", count($movies));
 		
@@ -29,7 +29,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 			//$i->Caption = iconv( "UTF-8", "ISO-8859-1//TRANSLIT", $i->Caption );
 			
 			$miniFilenameMatches = array();
-			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $miniFilenameMatches) === 1) {
+			if(preg_match("#$urlBase(.*)#", $m->FlashMovieItem->FilmUrl, $miniFilenameMatches) === 1) {
 				$pathinfo = pathinfo($miniFilenameMatches[1]);
 				$response = $this->getOrCreateFile($chaosClient, $object, null, $this->_CHAOSVideoFormatID, $this->_CHAOSVideoDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
 				if($response == null) {
@@ -39,7 +39,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 					$videosProcessed[] = $response;
 				}
 			} else {
-				printf("\tWarning: Found an images which was didn't have a scanpix/mini URL. This was not imported.\n");
+				printf("\tWarning: Found an images which was didn't have a video URL. This was not imported.\n");
 			}
 		}
 		echo self::PROGRESS_END_CHAR;

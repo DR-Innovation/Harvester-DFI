@@ -19,7 +19,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-libxml_use_internal_errors();
+libxml_use_internal_errors(true);
 
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
@@ -40,7 +40,7 @@ use dfi\model\MovieItem;
 use dfi\DFIClient;
 use dfi\dka\DKAXMLGenerator;
 use dfi\dka\DKA2XMLGenerator;
-use dfi\DFIXMLGenerator;
+use dfi\dka\DFIXMLGenerator;
 use dfi\DFIImageExtractor;
 use dfi\DFIVideoExtractor;
 
