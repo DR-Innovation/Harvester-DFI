@@ -25,7 +25,11 @@ libxml_use_internal_errors();
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
 	die("The CHAOS_CLIENT_SRC env parameter must point to the src directory of a CHAOS PHP Client");
 }
+if(!isset($_SERVER['HARVESTER_BASE_SRC'])) {
+	die("The HARVESTER_BASE_SRC env parameter must point to the src directory of the CHAOS Harvester base.");
+}
 set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['CHAOS_CLIENT_SRC']);
+set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['HARVESTER_BASE_SRC']);
 require_once("CaseSensitiveAutoload.php"); // This will be reused by this script.
 spl_autoload_extensions(".php");
 spl_autoload_register("CaseSensitiveAutoload");
@@ -212,7 +216,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 */
 	protected $_CHAOSVideoDestinationID;
 	
-	protected $_CHAOSDFIFolderID;
+	protected $_CHAOSFolderID;
 	
 	/**
 	 * An associative array describing the configuration parameters for the harvester.
@@ -231,7 +235,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 		"CHAOS_VIDEO_FORMAT_ID" => "_CHAOSVideoFormatID",
 		"CHAOS_IMAGE_DESTINATION_ID" => "_CHAOSImageDestinationID",
 		"CHAOS_VIDEO_DESTINATION_ID" => "_CHAOSVideoDestinationID",
-		"CHAOS_DFI_FOLDER_ID" => "_CHAOSDFIFolderID"
+		"CHAOS_FOLDER_ID" => "_CHAOSFolderID"
 	);
 	
 	/**
@@ -389,7 +393,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 		if($DFIId == null || !is_numeric(strval($DFIId))) {
 			throw new RuntimeException("Cannot get or create a CHAOS object for a DFI film without an internal DFI ID (got '$DFIId').");
 		}
-		$folderId = $this->_CHAOSDFIFolderID;
+		$folderId = $this->_CHAOSFolderID;
 		$objectTypeId = $this->_DKAObjectType->ID;
 		// Query for a CHAOS Object that represents the DFI movie.
 		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
@@ -410,7 +414,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 		// If it's not there, create it.
 		if($response->MCM()->TotalCount() == 0) {
 			printf("\tFound a film in the DFI service which is not already represented by a CHAOS object.\n");
-			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSDFIFolderID);
+			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSFolderID);
 			if($response == null) {
 				throw new RuntimeException("Couldn't create a DKA Object: response object was null.");
 			} else if(!$response->WasSuccess()) {
