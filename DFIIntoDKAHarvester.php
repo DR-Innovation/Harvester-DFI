@@ -52,9 +52,7 @@ class DFIIntoDKAHarvester {
 	const DFI_SCHEMA_NAME = "DKA.DFI";
 	
 	const DKA_OBJECT_TYPE_NAME = "DKA Program";
-	//const DFI_FOLDER = "DFI/public";
 	
-	//const DKA_XML_REVISION = 1; // Used when overwriting older versions of Metadata XML on a CHAOS object.
 	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
 	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
 	
@@ -64,10 +62,25 @@ class DFIIntoDKAHarvester {
 	function main($args = array()) {
 		printf("DFIIntoDKAHarvester %s started %s.\n", DFIIntoDKAHarvester::VERSION, date('D, d M Y H:i:s'));
 		
-		$runtimeOptions = self::extractOptionsFromArguments($args);
-		
-		$starttime = time();
 		try {
+			$runtimeOptions = self::extractOptionsFromArguments($args);
+			
+			if(array_key_exists('publish', $runtimeOptions) && array_key_exists('just-publish', $runtimeOptions)) {
+				throw new InvalidArgumentException("Cannot have both publish and just-publish options sat.");
+			}
+			
+			$publishAccessPointGUID = null;
+			$skipProcessing = null;
+			if(array_key_exists('publish', $runtimeOptions)) {
+				$publishAccessPointGUID = $runtimeOptions['publish'];
+			}
+			if(array_key_exists('just-publish', $runtimeOptions)) {
+				$publishAccessPointGUID = $runtimeOptions['just-publish'];
+				$skipProcessing = true;
+			}
+			$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
+			
+			$starttime = time();
 			$h = new DFIIntoDKAHarvester();
 			if(array_key_exists('range', $runtimeOptions)) {
 				$rangeParams = explode('-', $runtimeOptions['range']);
@@ -77,18 +90,18 @@ class DFIIntoDKAHarvester {
 					if($end < $start) {
 						throw new InvalidArgumentException("Given a range parameter which has end < start.");
 					}
-					$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
-					$h->processMovies($start, $end-$start+1, $delay);
+					
+					$h->processMovies($start, $end-$start+1, $delay, $publishAccessPointGUID, $skipProcessing);
 				} else {
 					throw new InvalidArgumentException("Given a range parameter was malformed.");
 				}
 			} elseif(array_key_exists('single-id', $runtimeOptions)) {
 				$dfiID = intval($runtimeOptions['single-id']);
 				printf("Updating a single DFI record (#%u).\n", $dfiID);
-				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID);
+				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID, $publishAccessPointGUID, $skipProcessing);
 				printf("Done.\n", $dfiID);
 			} elseif(array_key_exists('all', $runtimeOptions) && $runtimeOptions['all'] == true) {
-				$h->processMovies();
+				$h->processMovies(0, null, 0, $publishAccessPointGUID, $skipProcessing);
 			} else {
 				throw new InvalidArgumentException("None of --all, --single or --range was sat.");
 			}
@@ -136,7 +149,7 @@ class DFIIntoDKAHarvester {
 	}
 	
 	protected static function printUsage($args) {
-		printf("Usage:\n\t%s [--all|--single-id={dfi-id}|--range={start-row}-{end-row}]\n", $args[0]);
+		printf("Usage:\n\t%s [--all|--single-id={dfi-id}|--range={start-row}-{end-row}] [--publish={access-point-guid}|--just-publish={access-point-guid}]\n", $args[0]);
 	}
 	
 	/**
@@ -152,10 +165,6 @@ class DFIIntoDKAHarvester {
 	public $_dfi;
 	
 	protected $_DKAObjectType;
-	
-// 	protected $_DKAImageFormat;
-	
-// 	protected $_DKAVideoFormat;
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -272,8 +281,10 @@ class DFIIntoDKAHarvester {
 	 * Fetch and process all advailable DFI movies.
 	 * This method calls fetchAllMovies on the 
 	 * @param int $delay A non-negative integer specifing the amount of micro seconds to sleep between each call to the API when fetching movies, use this to do a slow fetch.
+	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
+	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 */
-	public function processMovies($offset = 0, $count = null, $delay = 0) {
+	public function processMovies($offset = 0, $count = null, $delay = 0, $publishAccessPointGUID = false, $skipProcessing = false) {
 		printf("Fetching ids for all movies: ");
 		$start = microtime(true);
 		
@@ -292,7 +303,7 @@ class DFIIntoDKAHarvester {
 				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
 				$start = microtime(true);
 				
-				$this->processMovie($m->Ref);
+				$this->processMovie($m->Ref, $publishAccessPointGUID, $skipProcessing);
 				
 				$elapsed = (microtime(true) - $start) * 1000.0;
 				printf("Completed the processing .. took %ums\n", round($elapsed));
@@ -331,10 +342,12 @@ class DFIIntoDKAHarvester {
 	/**
 	 * Fetch and process a single DFI movie.
 	 * @param string $reference the URL address referencing the movie through the DFI service.
+	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
+	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
 	 * this will most likely happen if the service is broken, or in lack of permissions.
 	 */
-	public function processMovie($reference) {
+	public function processMovie($reference, $publishAccessPointGUID = false, $skipProcessing = false) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
 		if($movieItem === false) {
 			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
@@ -352,42 +365,56 @@ class DFIIntoDKAHarvester {
 		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_DFIFolder->ID, true, null, 0, 10);
 		$object = $this->getOrCreateObject($movieItem->ID);
 		
-		// We create a list of files that have been processed and reused.
-		$object->ProcessedFiles = array();
-		
-		$imagesProcessed = DFIImageExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
-		$videosProcessed = DFIVideoExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
-		
-		$types = array();
-		if(count($imagesProcessed) > 0) {
-			$types[] = "Picture";
-		}
-		if(count($videosProcessed) > 0) {
-			$types[] = "Video";
-		}
-		
-		// Do we have any files on the object which has not been processed by the search?
-		foreach($object->Files as $f) {
-			if(!in_array($f, $object->ProcessedFiles)) {
-				printf("\t[!] The file '%s' (%s) was a file of the object, but not processed, maybe it was deleted from the DFI service.\n", $f->Filename, $f->ID);
+		if(!$skipProcessing) {
+			// We create a list of files that have been processed and reused.
+			$object->ProcessedFiles = array();
+			
+			$imagesProcessed = DFIImageExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
+			$videosProcessed = DFIVideoExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
+			
+			$types = array();
+			if(count($imagesProcessed) > 0) {
+				$types[] = "Picture";
+			}
+			if(count($videosProcessed) > 0) {
+				$types[] = "Video";
+			}
+			
+			// Do we have any files on the object which has not been processed by the search?
+			foreach($object->Files as $f) {
+				if(!in_array($f, $object->ProcessedFiles)) {
+					printf("\t[!] The file '%s' (%s) was a file of the object, but not processed, maybe it was deleted from the DFI service.\n", $f->Filename, $f->ID);
+				}
+			}
+			
+			$xml = $this->generateXML($movieItem, $types);
+			
+			$revisions = self::extractMetadataRevisions($object);
+			
+			foreach($xml as $schemaGUID => $metadata) {
+				// This is not implemented.
+				// $currentMetadata = $this->_chaos->Metadata()->Get($object->GUID, $schema->GUID, 'da');
+				//var_dump($currentMetadata);
+				$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
+				printf("\tSetting '%s' metadata on the CHAOS object (overwriting revision %u): ", $schemaGUID, $revision);
+				
+				$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
+				if(!$response->WasSuccess()) {
+					printf("Failed.\n");
+					throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
+				} else {
+					printf("Succeeded.\n");
+				}
 			}
 		}
 		
-		$xml = $this->generateXML($movieItem, $types);
-		
-		$revisions = self::extractMetadataRevisions($object);
-		
-		foreach($xml as $schemaGUID => $metadata) {
-			// This is not implemented.
-			// $currentMetadata = $this->_chaos->Metadata()->Get($object->GUID, $schema->GUID, 'da');
-			//var_dump($currentMetadata);
-			$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
-			printf("\tSetting '%s' metadata on the CHAOS object (overwriting revision %u): ", $schemaGUID, $revision);
-			
-			$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
-			if(!$response->WasSuccess()) {
+		if($publishAccessPointGUID !== false) {
+			$now = new DateTime();
+			printf("\tChanging the publish settings to: GUID = %s and startDate = %s: ", $publishAccessPointGUID, $now->format("Y-m-d H:i:s"));
+			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $publishAccessPointGUID, $now);
+			if(!$response->WasSuccess() || !$response->MCM()->WasSuccess()) {
 				printf("Failed.\n");
-				throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
+				throw new RuntimeException("Couldn't set the publish settings on the CHAOS object.");
 			} else {
 				printf("Succeeded.\n");
 			}
@@ -474,70 +501,7 @@ class DFIIntoDKAHarvester {
 			}
 		}
 		return false;
-		/*
-		$censorship = strval($movieItem->Censorship);
-		switch ($censorship) {
-			case '':
-			case 'Tilladt for alle':
-			case 'Tilladt for børn over 12 år':
-				return false;
-			case 'Forbudt for børn under 16 år':
-			default:
-				return true;
-		}
-		*/
-		
 	}
-	
-	/**
-	 * Resolves the CHAOS folders on a path, by recursively calling and storing each foldername along the path.
-	 * @param string|array $path The path.
-	 * @param unknown_type $parentId The parent ID of the folder from which to start the search, null if the path is absolute.
-	 * @throws InvalidArgumentException If the argument is neither a string nor an array.
-	 * @return multitype:stdClass An array of CHAOS folders, as returned from the service.
-	 */
-	/*
-	protected function resolveFoldersOnPath($path, $parentId = null) {
-		if(is_string($path)) {
-			// Extract an array of non empty folder names on the path.
-			$folderNames = array();
-			$explodedPath = explode("/", $path);
-			foreach($explodedPath as $folder) {
-				if($folder !== '') { // Ignore empty foldernames.
-					$folderNames[] = $folder;
-				}
-			}
-			$path = $folderNames;
-		} elseif (!is_array($path)) {
-			throw new InvalidArgumentException("The argument must be a string or an array.");
-		}
-		
-		if(count($path) == 0) {
-			return array(); // Base case.
-		} else {
-			$currentFolderName = $path[0];
-			$restOfPath = array_slice($path, 1);
-			
-			$response = $this->_chaos->Folder()->Get(null, $parentId);
-			if(!$response->WasSuccess()) {
-				return null;
-			}
-			foreach($response->MCM()->Results() as $folder) {
-				if($folder->Name === $currentFolderName) {
-					// We found it ..
-					// Call recursively of all children.
-					$result = $this->resolveFoldersOnPath($restOfPath, $folder->ID);
-					if($result === null) {
-						return null;
-					}
-					array_unshift($result, $folder);
-					return $result;
-				}
-			}
-			return null; // No subfolder had the correct name.
-		}
-	}
-	*/
 	
 	/**
 	 * Extract the revisions for the metadata currently associated with the object.
@@ -662,31 +626,6 @@ class DFIIntoDKAHarvester {
 		DKA2XMLGenerator::instance()->fetchSchema($this->_chaos);
 		DFIXMLGenerator::instance()->fetchSchema($this->_chaos);
 		
-		/*
-		$result = $this->_chaos->MetadataSchema()->Get();
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't lookup the metadata schema for the DKA specific data: ".$result->Error()->Message());
-		}
-		
-		$schemaNames = array (self::DKA_SCHEMA_NAME, self::DKA2_SCHEMA_NAME, self::DFI_SCHEMA_NAME);
-		
-		// Extract the DKA metadata schema.
-		$this->_MetadataSchemas = array();
-		foreach($result->MCM()->Results() as $schema) {
-			if(in_array($schema->Name, $schemaNames)) {
-				// We found the DKA metadata schema.
-				$this->_MetadataSchemas[$schema->Name] = $schema;
-			}
-		}
-		
-		foreach($schemaNames as $n) {
-			if(!key_exists($n, $this->_MetadataSchemas)) {
-				printf("Failed.\n");
-				throw new RuntimeException("Couldn't find the '$n' metadata schema.");
-			}
-		}
-		*/
 		printf("Succeeded.\n");
 	}
 	
@@ -718,50 +657,6 @@ class DFIIntoDKAHarvester {
 			printf("Succeeded, it has ID: %s\n", $this->_DKAObjectType->ID);
 		}
 	}
-	
-// 	/**
-// 	 * Fetches the DKA Image format and stores it in the _DKAImageFormat field.
-// 	 * @throws RuntimeException If it fails.
-// 	 */
-// 	protected function CHAOS_fetchDKAImageFormat() {
-// 		// TODO: Implement to change the value of $this->_DKAImageFormat
-// 		// This is not possible atm as the CHAOS PHP-SDK does not support Get queries for formats.
-// 		$this->_DKAImageFormat = array('ID' => $this->_CHAOSImageFormatID);
-// 	}
-	
-// 	/**
-// 	 * Fetches the DKA Video format and stores it in the _DKAVideoFormat field.
-// 	 * @throws RuntimeException If it fails.
-// 	 */
-// 	protected function CHAOS_fetchDKAVideoFormat() {
-// 		// TODO: Implement to change the value of $this->_DKAVideoFormat
-// 		// This is not possible atm as the CHAOS PHP-SDK does not support Get queries for formats.
-// 		$this->_DKAVideoFormat = array('ID' => $this->_CHAOSVideoFormatID);
-// 	}
-	
-	/**
-	 * Fetches the folder on the CHAOS system to use when creating DKA Programs,
-	 * based on the DFI_FOLDER const. This is stores in the _DFIFolder field.
-	 * @throws RuntimeException If it fails.
-	 */
-	/*
-	protected function CHAOS_fetchDFIFolder() {
-		$this->_DFIFolder = null;
-		
-		printf("Looking up the CHAOS folder (%s) to place DFI items: ", self::DFI_FOLDER);
-		$path = $this->resolveFoldersOnPath(self::DFI_FOLDER);
-		if($path != null && is_array($path)) {
-			$this->_DFIFolder = end($path);
-		}
-		
-		if($this->_DFIFolder === null) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't find the folder to place DFI specific data.");
-		} else {
-			printf("Succeeded, it has ID: %s\n", $this->_DFIFolder->ID);
-		}
-	}
-	*/
 	
 	// DFI specific methods.
 	
