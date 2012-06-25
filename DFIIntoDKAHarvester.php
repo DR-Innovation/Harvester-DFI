@@ -214,6 +214,11 @@ class DFIIntoDKAHarvester {
 	 * The ID of the format to be used when linking images to a DKA Program.
 	 * @var string
 	 */
+	protected $_CHAOSLowResImageFormatID;
+	/**
+	 * The ID of the format to be used when linking images to a DKA Program.
+	 * @var string
+	 */
 	protected $_CHAOSThumbnailImageFormatID;
 	
 	/**
@@ -246,6 +251,7 @@ class DFIIntoDKAHarvester {
 		"CHAOS_EMAIL" => "_CHAOSEmail",
 		"CHAOS_PASSWORD" => "_CHAOSPassword",
 		"CHAOS_IMAGE_FORMAT_ID" => "_CHAOSImageFormatID",
+		"CHAOS_LOWRES_IMAGE_FORMAT_ID" => "_CHAOSLowResImageFormatID",
 		"CHAOS_THUMBNAIL_IMAGE_FORMAT_ID" => "_CHAOSThumbnailImageFormatID",
 		"CHAOS_VIDEO_FORMAT_ID" => "_CHAOSVideoFormatID",
 		"CHAOS_IMAGE_DESTINATION_ID" => "_CHAOSImageDestinationID",
@@ -489,7 +495,7 @@ class DFIIntoDKAHarvester {
 	
 	// Helpers
 	
-	/**
+	/**_CHAOSLowResImageFormatID
 	 * Checks if this movie should be excluded from the harvest, because of censorship.
 	 * @param \dfi\model\MovieItem $movieItem A particular MovieItem from the DFI service, representing a particular movie.
 	 * @return bool True if this movie should be excluded, false otherwise.
@@ -595,6 +601,7 @@ class DFIIntoDKAHarvester {
 		
 		DFIImageExtractor::instance()->_CHAOSImageDestinationID = $this->_CHAOSImageDestinationID;
 		DFIImageExtractor::instance()->_CHAOSImageFormatID = $this->_CHAOSImageFormatID;
+		DFIImageExtractor::instance()->_CHAOSLowResImageFormatID = $this->_CHAOSLowResImageFormatID;
 		DFIImageExtractor::instance()->_CHAOSThumbnailImageFormatID = $this->_CHAOSThumbnailImageFormatID;
 		DFIVideoExtractor::instance()->_CHAOSVideoDestinationID = $this->_CHAOSVideoDestinationID;
 		DFIVideoExtractor::instance()->_CHAOSVideoFormatID = $this->_CHAOSVideoFormatID;
