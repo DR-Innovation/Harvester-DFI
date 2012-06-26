@@ -21,7 +21,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 libxml_use_internal_errors(true);
 
-require_once("src/timed.php");
+require_once("timed.php");
 
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
