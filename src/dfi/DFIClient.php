@@ -37,7 +37,7 @@ class DFIClient {
 	 * @return boolean True if the service call goes through, false if not.
 	 */
 	public function isServiceAdvailable() {
-		$response = simplexml_load_file($this->_baseURL.self::LIST_MOVIES.'?rows=1');
+		$response = $this->load($this->_baseURL.self::LIST_MOVIES.'?rows=1');
 		return ($response !== false);
 	}
 	
@@ -50,7 +50,7 @@ class DFIClient {
 	 */
 	public function fetchMovies($startrow = 0, $rows = 1000) {
 		//echo "fetchMovies called with \$startrow=$startrow and \$rows=$rows\n";
-		$response = simplexml_load_file($this->_baseURL.self::LIST_MOVIES."?startrow=$startrow&rows=$rows");
+		$response = $this->load($this->_baseURL.self::LIST_MOVIES."?startrow=$startrow&rows=$rows");
 		if($response === false || $response->MovieListItem == null) {
 			throw new RuntimeException("Failed to fetch movies using \$startrow=$startrow and \$rows=$rows.");
 		} else {
@@ -110,6 +110,9 @@ class DFIClient {
 	 * @return SimpleXMLElement The root element of the resource requested.
 	 */
 	public function load($url) {
-		return simplexml_load_file($url);
+		timed();
+		$result = simplexml_load_file($url);
+		timed('dfi');
+		return $result;
 	}
 }

@@ -21,6 +21,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 libxml_use_internal_errors(true);
 
+require_once("src/timed.php");
+
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
 	die("The CHAOS_CLIENT_SRC env parameter must point to the src directory of a CHAOS PHP Client");
@@ -62,8 +64,8 @@ class DFIIntoDKAHarvester extends AHarvester {
 	
 	const DKA_OBJECT_TYPE_NAME = "DKA Program";
 	
-	const DFI_ORGANIZATION_NAME = "Dansk Film Institut";
-	const RIGHTS_DESCIPTION = "Copyright © Dansk Film Institut"; // TODO: Is this correct?
+	const DFI_ORGANIZATION_NAME = "Det Danske Filminstitut";
+	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut"; // TODO: Is this correct?
 	
 	/**
 	 * Main method of the harvester, call this once.
@@ -130,6 +132,8 @@ class DFIIntoDKAHarvester extends AHarvester {
 			exit;
 		}
 		$elapsed = time() - $starttime;
+		timed_print();
+		
 		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
 	}
 	
@@ -363,8 +367,9 @@ class DFIIntoDKAHarvester extends AHarvester {
 				//var_dump($currentMetadata);
 				$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
 				printf("\tSetting '%s' metadata on the CHAOS object (overwriting revision %u): ", $schemaGUID, $revision);
-				
+				timed();
 				$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
+				timed('chaos');
 				if(!$response->WasSuccess()) {
 					printf("Failed.\n");
 					throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
@@ -377,7 +382,9 @@ class DFIIntoDKAHarvester extends AHarvester {
 		if($publishAccessPointGUID !== null) {
 			$now = new DateTime();
 			printf("\tChanging the publish settings to: GUID = %s and startDate = %s: ", $publishAccessPointGUID, $now->format("Y-m-d H:i:s"));
+			timed();
 			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $publishAccessPointGUID, $now);
+			timed('chaos');
 			if(!$response->WasSuccess() || !$response->MCM()->WasSuccess()) {
 				printf("Failed.\n");
 				throw new RuntimeException("Couldn't set the publish settings on the CHAOS object.");
@@ -404,7 +411,9 @@ class DFIIntoDKAHarvester extends AHarvester {
 		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
 		//printf("Solr query: %s\n", $query);
 		//$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
+		timed();
 		$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
+		timed('chaos');
 		//$response = $this->_chaos->Object()->Get("(FolderTree:$folderId AND ObjectTypeID:$objectTypeId)", "DateCreated+desc", null, 0, 100, true, true);
 		
 		if(!$response->WasSuccess()) {
@@ -419,7 +428,9 @@ class DFIIntoDKAHarvester extends AHarvester {
 		// If it's not there, create it.
 		if($response->MCM()->TotalCount() == 0) {
 			printf("\tFound a film in the DFI service which is not already represented by a CHAOS object.\n");
+			timed();
 			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSFolderID);
+			timed('chaos');
 			if($response == null) {
 				throw new RuntimeException("Couldn't create a DKA Object: response object was null.");
 			} else if(!$response->WasSuccess()) {
@@ -498,19 +509,21 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 */
 	protected function CHAOS_initialize() {
 		printf("Creating a session for the CHAOS service on %s using clientGUID %s: ", $this->_CHAOSURL, $this->_CHAOSClientGUID);
-		
 		// Create a new client, a session is automaticly created.
+		timed();
 		$this->_chaos = new PortalClient($this->_CHAOSURL, $this->_CHAOSClientGUID);
+		timed('chaos');
 		if(!$this->_chaos->HasSession()) {
 			printf("Failed.\n");
 			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
 		} else {
 			printf("Succeeded: SessionGUID is %s\n", $this->_chaos->SessionGUID());
 		}
-		
+		timed();
 		$this->CHAOS_authenticateSession();
 		$this->CHAOS_fetchMetadataSchemas();
 		$this->CHAOS_fetchDKAObjectType();
+		timed('chaos');
 		//$this->CHAOS_fetchDFIFolder();
 	}
 	

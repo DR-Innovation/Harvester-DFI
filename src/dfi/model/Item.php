@@ -11,6 +11,8 @@ class Item extends SimpleXMLElement {
 	 * @return Item The item.
 	 */
 	public static function fetch($client, $url) {
+		timed();
 		return simplexml_load_file($url, get_called_class());
+		timed('dfi');
 	}
 }
