@@ -166,7 +166,7 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 		} elseif(strlen($year) === 4) {
 			return $year . '-01-01';
 		} else {
-			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4');
+			throw new \InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
 		}
 	}
 	
@@ -184,7 +184,7 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 		} elseif(strlen($year) === 4) {
 			return $year . '-01-01T00:00:00';
 		} else {
-			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4');
+			throw new \InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
 		}
 	}
 }

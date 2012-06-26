@@ -512,13 +512,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 		$this->CHAOS_fetchMetadataSchemas();
 		$this->CHAOS_fetchDKAObjectType();
 		//$this->CHAOS_fetchDFIFolder();
-		
-		DFIImageExtractor::instance()->_CHAOSImageDestinationID = $this->_CHAOSImageDestinationID;
-		DFIImageExtractor::instance()->_CHAOSImageFormatID = $this->_CHAOSImageFormatID;
-		DFIImageExtractor::instance()->_CHAOSLowResImageFormatID = $this->_CHAOSLowResImageFormatID;
-		DFIImageExtractor::instance()->_CHAOSThumbnailImageFormatID = $this->_CHAOSThumbnailImageFormatID;
-		DFIVideoExtractor::instance()->_CHAOSVideoDestinationID = $this->_CHAOSVideoDestinationID;
-		DFIVideoExtractor::instance()->_CHAOSVideoFormatID = $this->_CHAOSVideoFormatID;
 	}
 	
 	/**
@@ -594,6 +587,13 @@ class DFIIntoDKAHarvester extends AHarvester {
 		} else {
 			printf("Succeeded.\n");
 		}
+		
+		DFIImageExtractor::instance()->_CHAOSImageDestinationID = $this->_CHAOSImageDestinationID;
+		DFIImageExtractor::instance()->_CHAOSImageFormatID = $this->_CHAOSImageFormatID;
+		DFIImageExtractor::instance()->_CHAOSLowResImageFormatID = $this->_CHAOSLowResImageFormatID;
+		DFIImageExtractor::instance()->_CHAOSThumbnailImageFormatID = $this->_CHAOSThumbnailImageFormatID;
+		DFIVideoExtractor::instance()->_CHAOSVideoDestinationID = $this->_CHAOSVideoDestinationID;
+		DFIVideoExtractor::instance()->_CHAOSVideoFormatID = $this->_CHAOSVideoFormatID;
 	}
 }
 
