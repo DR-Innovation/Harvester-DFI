@@ -80,14 +80,23 @@ class DFIIntoDKAHarvester extends AHarvester {
 				throw new InvalidArgumentException("Cannot have both publish and just-publish options sat.");
 			}
 			
+			$publish = null;
 			$publishAccessPointGUID = null;
 			$skipProcessing = null;
 			if(array_key_exists('publish', $runtimeOptions)) {
 				$publishAccessPointGUID = $runtimeOptions['publish'];
+				$publish = true;
 			}
 			if(array_key_exists('just-publish', $runtimeOptions)) {
 				$publishAccessPointGUID = $runtimeOptions['just-publish'];
 				$skipProcessing = true;
+				$publish = true;
+			}
+			if($publish === true && array_key_exists('unpublish', $runtimeOptions)) {
+				throw new InvalidArgumentException("Cannot have both publish or just-publish and unpublish options sat.");
+			} elseif(array_key_exists('unpublish', $runtimeOptions)) {
+				$publishAccessPointGUID = $runtimeOptions['unpublish'];
+				$publish = false;
 			}
 			$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
 			
@@ -102,17 +111,17 @@ class DFIIntoDKAHarvester extends AHarvester {
 						throw new InvalidArgumentException("Given a range parameter which has end < start.");
 					}
 					
-					$h->processMovies($start, $end-$start+1, $delay, $publishAccessPointGUID, $skipProcessing);
+					$h->processMovies($start, $end-$start+1, $delay, $publish, $publishAccessPointGUID, $skipProcessing);
 				} else {
 					throw new InvalidArgumentException("Given a range parameter was malformed.");
 				}
 			} elseif(array_key_exists('single-id', $runtimeOptions)) {
 				$dfiID = intval($runtimeOptions['single-id']);
 				printf("Updating a single DFI record (#%u).\n", $dfiID);
-				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID, $publishAccessPointGUID, $skipProcessing);
+				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID, $publish, $publishAccessPointGUID, $skipProcessing);
 				printf("Done.\n", $dfiID);
 			} elseif(array_key_exists('all', $runtimeOptions) && $runtimeOptions['all'] == true) {
-				$h->processMovies(0, null, 0, $publishAccessPointGUID, $skipProcessing);
+				$h->processMovies(0, null, 0, $publish, $publishAccessPointGUID, $skipProcessing);
 			} else {
 				throw new InvalidArgumentException("None of --all, --single or --range was sat.");
 			}
@@ -254,7 +263,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
 	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 */
-	public function processMovies($offset = 0, $count = null, $delay = 0, $publishAccessPointGUID = null, $skipProcessing = false) {
+	public function processMovies($offset = 0, $count = null, $delay = 0, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
 		printf("Fetching ids for all movies: ");
 		$start = microtime(true);
 		
@@ -273,7 +282,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
 				$start = microtime(true);
 				
-				$this->processMovie($m->Ref, $publishAccessPointGUID, $skipProcessing);
+				$this->processMovie($m->Ref, $publish, $accessPointGUID, $skipProcessing);
 				
 				$elapsed = (microtime(true) - $start) * 1000.0;
 				printf("Completed the processing .. took %ums\n", round($elapsed));
@@ -317,7 +326,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
 	 * this will most likely happen if the service is broken, or in lack of permissions.
 	 */
-	public function processMovie($reference, $publishAccessPointGUID = null, $skipProcessing = false) {
+	public function processMovie($reference, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
 		if($movieItem === false) {
 			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
@@ -379,11 +388,16 @@ class DFIIntoDKAHarvester extends AHarvester {
 			}
 		}
 		
-		if($publishAccessPointGUID !== null) {
-			$now = new DateTime();
-			printf("\tChanging the publish settings to: GUID = %s and startDate = %s: ", $publishAccessPointGUID, $now->format("Y-m-d H:i:s"));
+		if($publish === true || $publish === false) {
+			$start = null;
+			if($publish === true) {
+				$start = new DateTime();
+				printf("\tChanging the publish settings for %s to startDate = %s: ", $accessPointGUID, $start->format("Y-m-d H:i:s"));
+			} elseif($publish === false) {
+				printf("\tChanging the publish settings for %s to unpublished: ", $accessPointGUID);
+			}
 			timed();
-			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $publishAccessPointGUID, $now);
+			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $accessPointGUID, $start);
 			timed('chaos');
 			if(!$response->WasSuccess() || !$response->MCM()->WasSuccess()) {
 				printf("Failed.\n");
