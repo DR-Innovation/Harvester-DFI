@@ -74,6 +74,8 @@ class DFIIntoDKAHarvester extends AHarvester {
 		printf("DFIIntoDKAHarvester %s started %s.\n", DFIIntoDKAHarvester::VERSION, date('D, d M Y H:i:s'));
 		
 		try {
+			// Processing runtime options.
+			
 			$runtimeOptions = self::extractOptionsFromArguments($args);
 			
 			if(array_key_exists('publish', $runtimeOptions) && array_key_exists('just-publish', $runtimeOptions)) {
@@ -99,7 +101,8 @@ class DFIIntoDKAHarvester extends AHarvester {
 				$publish = false;
 			}
 			$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
-			
+
+			// Starting on the real job at hand
 			$starttime = time();
 			$h = new DFIIntoDKAHarvester();
 			if(array_key_exists('range', $runtimeOptions)) {
@@ -125,7 +128,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 			} else {
 				throw new InvalidArgumentException("None of --all, --single or --range was sat.");
 			}
-			//
 		} catch(InvalidArgumentException $e) {
 			echo "\n";
 			printf("Invalid arguments given: %s\n", $e->getMessage());
@@ -140,6 +142,12 @@ class DFIIntoDKAHarvester extends AHarvester {
 			printf("Error occured in the harvester implementation: %s\n", $e);
 			exit;
 		}
+		
+		// If the handle to the harvester has not been deallocated already.
+		if($h !== null) {
+			unset($h);
+		}
+		
 		$elapsed = time() - $starttime;
 		timed_print();
 		
@@ -174,6 +182,11 @@ class DFIIntoDKAHarvester extends AHarvester {
 		
 		$this->CHAOS_initialize();
 		$this->DFI_initialize();
+	}
+	
+	public function __destruct() {
+		unset($this->_chaos);
+		unset($this->_dfi);
 	}
 	
 	/**

@@ -32,6 +32,14 @@ class DFIClient {
 		$this->_baseURL = $baseURL;
 	}
 	
+	public function __destruct() {
+		if($this->_curlHandle !== null) {
+			echo "Closing the HTTP connection with the DFI service.\n";
+			curl_close($this->_curlHandle);
+			$this->_curlHandle = null;
+		}
+	}
+	
 	/**
 	 * Checks if the DFI service is advailable, by sending a single row request for the movie.service.
 	 * @return boolean True if the service call goes through, false if not.
@@ -104,15 +112,33 @@ class DFIClient {
 		}
 	}
 	
+	private $_curlHandle;
+	
 	/**
 	 * Loads xml from some URL using the simplexml_load_file function call.
 	 * @param string $url URL address of the XML to load.
 	 * @return SimpleXMLElement The root element of the resource requested.
 	 */
-	public function load($url) {
+	public function load($url, $class_name = null) {
+		if($this->_curlHandle == null) {
+			$this->_curlHandle = curl_init();
+			// Return the transfer when exec is called.
+			curl_setopt($this->_curlHandle, CURLOPT_RETURNTRANSFER, true);
+		}
+		curl_setopt($this->_curlHandle, CURLOPT_URL, $url);
+		// Fetch the website.
 		timed();
-		$result = simplexml_load_file($url);
+		$result = curl_exec($this->_curlHandle);
 		timed('dfi');
-		return $result;
+		if($result === false) {
+			throw new RuntimeException("The DFI webservice responeded unsuccessful for url = '$url'.");
+		} else {
+			$xmlResult = simplexml_load_string($result, $class_name);
+			if($xmlResult === false) {
+				throw new RuntimeException("The DFI webservice returned invalid XML for url = '$url'.");
+			} else {
+				return $xmlResult;
+			}
+		}
 	}
 }
