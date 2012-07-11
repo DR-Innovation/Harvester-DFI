@@ -187,7 +187,7 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	 * @throws RuntimeException if the CHAOS services are unreachable or
 	 * if the CHAOS credentials provided fails to authenticate the session.
 	 */
-	public function __construct() {
+	public function __construct($args) {
 		// Adding configuration parameters
 		$this->_CONFIGURATION_PARAMETERS["DFI_URL"] = "_DFIUrl";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_FORMAT_ID"] = "_imageFormatID";
@@ -204,7 +204,7 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 		$this->_fileExtractors[] = dfi\DFIImageExtractor::instance();
 		$this->_fileExtractors[] = dfi\DFIVideoExtractor::instance();
 		
-		parent::__construct();
+		parent::__construct($args);
 		
 		$this->DFI_initialize();
 	}
@@ -455,12 +455,12 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	
 	// Helpers
 	
-	/**_CHAOSLowResImageFormatID
+	/**
 	 * Checks if this movie should be excluded from the harvest, because of censorship.
 	 * @param \dfi\model\MovieItem $movieItem A particular MovieItem from the DFI service, representing a particular movie.
 	 * @return bool True if this movie should be excluded, false otherwise.
 	 */
-	public static function shouldBeCensored($movieItem) {
+	public function shouldBeSkipped($movieItem) {
 		foreach($movieItem->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
 			if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
 				return "The subcategory is $subCategory.";
