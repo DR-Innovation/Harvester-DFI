@@ -16,6 +16,7 @@
 
 namespace dfi;
 use model\MovieItem;
+use RuntimeException;
 
 class DFIClient {
 	
@@ -79,7 +80,7 @@ class DFIClient {
 	 * @throws RuntimeException If it fails to fetch the movies using the given parameters.
 	 * @return multitype:SimpleXMLElement An array of movies.
 	 */
-	public function fetchMultipleMovies($offset = 0, $count = null, $batchSize = 1000, $delay = 0) {
+	public function fetchMultipleMovies($offset = 0, $count = null, $batchSize = 1000) {
 		if($batchSize > 1000) {
 			throw new InvalidArgumentException("\$batchSize cannot exceed 1000, as this is not supported by the service anyway");
 		} elseif($batchSize < 1) {
@@ -104,10 +105,6 @@ class DFIClient {
 				$offset += $batchSize;
 			} else {
 				return $result;
-			}
-			
-			if($delay > 0) {
-				usleep($delay);
 			}
 		}
 	}

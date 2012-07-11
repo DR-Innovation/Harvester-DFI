@@ -1,8 +1,11 @@
 <?php
 namespace dfi\dka;
-class DKAXMLGenerator extends \CHAOSXMLGenerator {
+use SimpleXMLElement;
+use InvalidArgumentException;
+class DKAMetadataGenerator extends \ACHAOSMetadataGenerator {
 	const SCHEMA_NAME = 'DKA';
 	const SCHEMA_GUID = '00000000-0000-0000-0000-000063c30000';
+	const VALIDATE = false;
 	
 	public static $singleton;
 	
@@ -20,10 +23,10 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 	 * @param boolean $validate Validate the generated XML agains a schema.
 	 * @return DOMDocument Representing the imported item as XML in a specific schema.
 	 */
-	public function generateXML($input, $validate = false) {
-		$movieItem = $input["movieItem"];
-		$fileTypes = $input["fileTypes"];
-		$result = new \SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
+	public function generateXML($externalObject, &$extras) {
+		$movieItem = $externalObject;
+		$fileTypes = array_key_exists('fileTypes', $extras) ? $extras["fileTypes"] : array();
+		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 		
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));
 		
@@ -99,7 +102,7 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 		// Generate the DOMDocument.
 		$dom = dom_import_simplexml($result)->ownerDocument;
 		$dom->formatOutput = true;
-		if($validate) {
+		if(self::VALIDATE) {
 			$this->validate($dom);
 		}
 		return $dom;
@@ -166,7 +169,7 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 		} elseif(strlen($year) === 4) {
 			return $year . '-01-01';
 		} else {
-			throw new \InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
+			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
 		}
 	}
 	
@@ -184,7 +187,7 @@ class DKAXMLGenerator extends \CHAOSXMLGenerator {
 		} elseif(strlen($year) === 4) {
 			return $year . '-01-01T00:00:00';
 		} else {
-			throw new \InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
+			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
 		}
 	}
 }

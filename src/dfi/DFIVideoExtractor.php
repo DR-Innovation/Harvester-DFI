@@ -1,21 +1,22 @@
 <?php
 namespace dfi;
-class DFIVideoExtractor extends \CHAOSFileExtractor {
+use RuntimeException;
+class DFIVideoExtractor extends \ACHAOSFileExtractor {
 	const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 	
-	public $_CHAOSVideoFormatID;
-	public $_CHAOSVideoDestinationID;
+	public $_videoFormatID;
+	public $_videoDestinationID;
 	
 	public static $singleton;
 	/**
 	 * Process the DFI movieitem.
-	 * @param CHAOS\Portal\Client\PortalClient $chaosClient The CHAOS client to use for the importing.
+	 * @param \DFIIntoDKAHarvester $harvester The CHAOS client to use for the importing.
 	 * @param dfi\DFIClient $dfiClient The DFI client to use for importing.
 	 * @param dfi\model\Item $movieItem The DFI movie item.
 	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the images should be added to.
 	 * @return array An array of processed files.
 	 */
-	function process($chaosClient, $dfiClient, $movieItem, $object) {
+	function process($harvester, $object, $movieItem, &$extras) {
 		$videosProcessed = array();
 		$urlBase = self::DFI_VIDEO_BASE;
 		
@@ -31,7 +32,7 @@ class DFIVideoExtractor extends \CHAOSFileExtractor {
 			$miniFilenameMatches = array();
 			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $miniFilenameMatches) === 1) {
 				$pathinfo = pathinfo($miniFilenameMatches[1]);
-				$response = $this->getOrCreateFile($chaosClient, $object, null, $this->_CHAOSVideoFormatID, $this->_CHAOSVideoDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
+				$response = $this->getOrCreateFile($harvester, $object, null, $this->_videoFormatID, $this->_videoDestinationID, $pathinfo['basename'], $pathinfo['basename'], $pathinfo['dirname']);
 				if($response == null) {
 					throw new RuntimeException("Failed to create a video file.");
 				} else {

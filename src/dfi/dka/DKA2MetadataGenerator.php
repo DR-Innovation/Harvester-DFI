@@ -1,8 +1,10 @@
 <?php
 namespace dfi\dka;
-class DKA2XMLGenerator extends DKAXMLGenerator {
+use SimpleXMLElement;
+class DKA2MetadataGenerator extends DKAMetadataGenerator {
 	const SCHEMA_NAME = 'DKA2';
 	const SCHEMA_GUID = '5906a41b-feae-48db-bfb7-714b3e105396';
+	const VALIDATE = true;
 	
 	public static $singleton;
 	
@@ -16,14 +18,14 @@ class DKA2XMLGenerator extends DKAXMLGenerator {
 	
 	/**
 	 * Generate XML from some import-specific object.
-	 * @param unknown_type $object
+	 * @param unknown_type $externalObject
 	 * @param boolean $validate Validate the generated XML agains a schema.
 	 * @return DOMDocument Representing the imported item as XML in a specific schema.
 	 */
-	public function generateXML($input, $validate = false) {
-		$movieItem = $input['movieItem'];
-		$fileTypes = $input['fileTypes'];
-		$result = new \SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
+	public function generateXML($externalObject, &$extras) {
+		$movieItem = $externalObject;
+		$fileTypes = array_key_exists('fileTypes', $extras) ? $extras["fileTypes"] : array();
+		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));
 		
@@ -105,7 +107,7 @@ class DKA2XMLGenerator extends DKAXMLGenerator {
 		// Generate the DOMDocument.
 		$dom = dom_import_simplexml($result)->ownerDocument;
 		$dom->formatOutput = true;
-		if($validate) {
+		if(self::VALIDATE) {
 			$this->validate($dom);
 		}
 		return $dom;

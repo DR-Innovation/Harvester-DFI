@@ -18,10 +18,8 @@
  */
 
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
+ini_set('display_errors', '0');
 libxml_use_internal_errors(true);
-
-require_once("timed.php");
 
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
@@ -37,14 +35,8 @@ spl_autoload_extensions(".php");
 spl_autoload_register("CaseSensitiveAutoload");
 // Bootstrapping CHAOS - end
 
-use CHAOS\Portal\Client\PortalClient;
 use dfi\model\MovieItem;
 use dfi\DFIClient;
-use dfi\dka\DKAXMLGenerator;
-use dfi\dka\DKA2XMLGenerator;
-use dfi\dka\DFIXMLGenerator;
-use dfi\DFIImageExtractor;
-use dfi\DFIVideoExtractor;
 
 /**
  * Main class of the DFI Harvester.
@@ -55,21 +47,57 @@ use dfi\DFIVideoExtractor;
  * @link       https://github.com/CHAOS-Community/Harvester-DFI
  * @since      Class available since Release 0.1
  */
-class DFIIntoDKAHarvester extends AHarvester {
+class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	
 	const VERSION = "0.1";
 	const DKA_SCHEMA_NAME = "DKA";
 	const DKA2_SCHEMA_NAME = "DKA2";
 	const DFI_SCHEMA_NAME = "DKA.DFI";
-	
-	const DKA_OBJECT_TYPE_NAME = "DKA Program";
-	
 	const DFI_ORGANIZATION_NAME = "Det Danske Filminstitut";
 	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut"; // TODO: Is this correct?
 	
 	/**
+	 * The URL of the DFI service.
+	 * @var string
+	 */
+	protected $_DFIUrl;
+	
+	/**
+	 * The ID of the format to be used when linking images to a DKA Program.
+	 * @var string
+	 */
+	protected $_imageFormatID;
+	/**
+	 * The ID of the format to be used when linking images to a DKA Program.
+	 * @var string
+	 */
+	protected $_lowResImageFormatID;
+	/**
+	 * The ID of the format to be used when linking images to a DKA Program.
+	 * @var string
+	 */
+	protected $_thumbnailImageFormatID;
+	
+	/**
+	 * The ID of the format to be used when linking videos to a DKA Program.
+	 * @var string
+	 */
+	protected $_videoFormatID;
+	/**
+	 * The ID of the format to be used when linking images to a DKA Program.
+	 * @var string
+	 */
+	protected $_imageDestinationID;
+	/**
+	 * The ID of the format to be used when linking videos to a DKA Program.
+	 * @var string
+	 */
+	protected $_videoDestinationID;
+	
+	/**
 	 * Main method of the harvester, call this once.
 	 */
+	/*
 	function main($args = array()) {
 		printf("DFIIntoDKAHarvester %s started %s.\n", DFIIntoDKAHarvester::VERSION, date('D, d M Y H:i:s'));
 		
@@ -100,7 +128,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 				$publishAccessPointGUID = $runtimeOptions['unpublish'];
 				$publish = false;
 			}
-			$delay = array_key_exists('delay', $runtimeOptions) ? intval($runtimeOptions['delay']) : 0;
 
 			// Starting on the real job at hand
 			$starttime = time();
@@ -114,7 +141,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 						throw new InvalidArgumentException("Given a range parameter which has end < start.");
 					}
 					
-					$h->processMovies($start, $end-$start+1, $delay, $publish, $publishAccessPointGUID, $skipProcessing);
+					$h->processMovies($start, $end-$start+1, $publish, $publishAccessPointGUID, $skipProcessing);
 				} else {
 					throw new InvalidArgumentException("Given a range parameter was malformed.");
 				}
@@ -153,24 +180,7 @@ class DFIIntoDKAHarvester extends AHarvester {
 		
 		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
 	}
-	
-	protected static function printUsage($args) {
-		printf("Usage:\n\t%s [--all|--single-id={dfi-id}|--range={start-row}-{end-row}] [--publish={access-point-guid}|--just-publish={access-point-guid}]\n", $args[0]);
-	}
-	
-	/**
-	 * The CHAOS Portal client to be used for communication with the CHAOS Service. 
-	 * @var PortalClient
-	 */
-	public $_chaos;
-	
-	/**
-	 * The DFI client to be used for communication with the DFI Service. 
-	 * @var DFIClient
-	 */
-	public $_dfi;
-	
-	protected $_DKAObjectType;
+	*/
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -178,109 +188,72 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 * if the CHAOS credentials provided fails to authenticate the session.
 	 */
 	public function __construct() {
-		$this->loadConfiguration();
+		// Adding configuration parameters
+		$this->_CONFIGURATION_PARAMETERS["DFI_URL"] = "_DFIUrl";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_FORMAT_ID"] = "_imageFormatID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_LOWRES_IMAGE_FORMAT_ID"] = "_lowResImageFormatID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_THUMBNAIL_IMAGE_FORMAT_ID"] = "_thumbnailImageFormatID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_VIDEO_FORMAT_ID"] = "_videoFormatID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_DESTINATION_ID"] = "_imageDestinationID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_VIDEO_DESTINATION_ID"] = "_videoDestinationID";
+		// Adding xml generators.
+		$this->_metadataGenerators[] = dfi\dka\DKAMetadataGenerator::instance();
+		$this->_metadataGenerators[] = dfi\dka\DKA2MetadataGenerator::instance();
+		$this->_metadataGenerators[] = dfi\dka\DFIMetadataGenerator::instance();
+		// Adding file extractors.
+		$this->_fileExtractors[] = dfi\DFIImageExtractor::instance();
+		$this->_fileExtractors[] = dfi\DFIVideoExtractor::instance();
 		
-		$this->CHAOS_initialize();
+		parent::__construct();
+		
 		$this->DFI_initialize();
 	}
 	
 	public function __destruct() {
-		unset($this->_chaos);
+		parent::__destruct();
 		unset($this->_dfi);
 	}
 	
-	/**
-	 * The URL of the DFI service.
-	 * @var string
-	 */
-	protected $_DFIUrl;
-	/**
-	 * The generated unique ID of the CHAOS Client.
-	 * (can be generated at http://www.guidgenerator.com/)
-	 * @var string
-	 */
-	protected $_CHAOSClientGUID;
-	/**
-	 * The URL of the CHAOS service.
-	 * @var string
-	 */
-	protected $_CHAOSURL;
-	/**
-	 * The email to be used to authenticate sessions from the CHAOS service.
-	 * @var string
-	 */
-	protected $_CHAOSEmail;
-	/**
-	 * The password to be used to authenticate sessions from the CHAOS service.
-	 * @var string
-	 */
-	protected $_CHAOSPassword;
-	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSImageFormatID;
-	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSLowResImageFormatID;
-	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSThumbnailImageFormatID;
+	protected function fetchSingle($reference) {
+		$response = MovieItem::fetch($this->_dfi, $reference);
+		$response->registerXPathNamespace('dfi', 'http://schemas.http://api.test.chaos-systems.com/Object/Gdatacontract.org/2004/07/Netmester.DFI.RestService.Items');
+		$response->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
+		return $response;
+	}
 	
-	/**
-	 * The ID of the format to be used when linking videos to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSVideoFormatID;
-	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSImageDestinationID;
-	/**
-	 * The ID of the format to be used when linking videos to a DKA Program.
-	 * @var string
-	 */
-	protected $_CHAOSVideoDestinationID;
+	protected function fetchRange($start, $count) {
+		$response = $this->_dfi->fetchMultipleMovies($start, $count, 1000);
+		$result = array();
+		foreach($response as $movieItem) {
+			$result[] = strval($movieItem->Ref);
+		}
+		return $result;
+	}
 	
-	protected $_CHAOSFolderID;
+	protected function initializeExtras(&$extras) {
+		$extras['processedFiles'] = array();
+		$extras['fileTypes'] = array();
+	}
 	
-	/**
-	 * An associative array describing the configuration parameters for the harvester.
-	 * This should ideally not be changed.
-	 * @var array[string]string
-	 */
-	protected $_CONFIGURATION_PARAMETERS = array(
-		"DFI_URL" => "_DFIUrl",
-		"CHAOS_CLIENT_GUID" => "_CHAOSClientGUID",
-		"CHAOS_URL" => "_CHAOSURL",
-		"CHAOS_EMAIL" => "_CHAOSEmail",
-		"CHAOS_PASSWORD" => "_CHAOSPassword",
-		"CHAOS_IMAGE_FORMAT_ID" => "_CHAOSImageFormatID",
-		"CHAOS_LOWRES_IMAGE_FORMAT_ID" => "_CHAOSLowResImageFormatID",
-		"CHAOS_THUMBNAIL_IMAGE_FORMAT_ID" => "_CHAOSThumbnailImageFormatID",
-		"CHAOS_VIDEO_FORMAT_ID" => "_CHAOSVideoFormatID",
-		"CHAOS_IMAGE_DESTINATION_ID" => "_CHAOSImageDestinationID",
-		"CHAOS_VIDEO_DESTINATION_ID" => "_CHAOSVideoDestinationID",
-		"CHAOS_FOLDER_ID" => "_CHAOSFolderID"
-	);
+	protected function externalObjectToString($externalObject) {
+		return sprintf("%s [%u]", $externalObject->Title, $externalObject->ID);
+	}
+	
+	public function getExternalClient() {
+		return $this->_dfi;
+	}
 	
 	/**
 	 * Fetch and process all advailable DFI movies.
 	 * This method calls fetchAllMovies on the 
-	 * @param int $delay A non-negative integer specifing the amount of micro seconds to sleep between each call to the API when fetching movies, use this to do a slow fetch.
 	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
 	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 */
-	public function processMovies($offset = 0, $count = null, $delay = 0, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
+	public function processMovies($offset = 0, $count = null, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
 		printf("Fetching ids for all movies: ");
 		$start = microtime(true);
 		
-		$movies = $this->_dfi->fetchMultipleMovies($offset, $count, 1000, $delay);
+		$movies = $this->_dfi->fetchMultipleMovies($offset, $count, 1000);
 		
 		$elapsed = (microtime(true) - $start) * 1000.0;
 		printf("done .. took %ums\n", round($elapsed));
@@ -344,8 +317,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 		if($movieItem === false) {
 			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
 		}
-		$movieItem->registerXPathNamespace('dfi', 'http://schemas.http://api.test.chaos-systems.com/Object/Gdatacontract.org/2004/07/Netmester.DFI.RestService.Items');
-		$movieItem->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
 
 		$shouldBeCensored = self::shouldBeCensored($movieItem);
 		if($shouldBeCensored !== false) {
@@ -361,8 +332,8 @@ class DFIIntoDKAHarvester extends AHarvester {
 			// We create a list of files that have been processed and reused.
 			$object->ProcessedFiles = array();
 			
-			$imagesProcessed = DFIImageExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
-			$videosProcessed = DFIVideoExtractor::instance()->process($this->_chaos, $this->_dfi, $movieItem, $object);
+			$imagesProcessed = dfi\DFIImageExtractor::instance()->process($this->_chaos, $object, $this->_dfi, $movieItem);
+			$videosProcessed = dfi\DFIVideoExtractor::instance()->process($this->_chaos, $object, $this->_dfi, $movieItem);
 			
 			$types = array();
 			if(count($imagesProcessed) > 0) {
@@ -428,10 +399,17 @@ class DFIIntoDKAHarvester extends AHarvester {
 	 * @throws RuntimeException If the request or creation of the object fails.
 	 * @return stdClass Representing the CHAOS existing or newly created DKA program -object.
 	 */
-	protected function getOrCreateObject($DFIId) {
-		if($DFIId == null || !is_numeric(strval($DFIId))) {
-			throw new RuntimeException("Cannot get or create a CHAOS object for a DFI film without an internal DFI ID (got '$DFIId').");
+	protected function getOrCreateObject($externalObject) {
+		if($externalObject == null) {
+			throw new RuntimeException("Cannot get or create a CHAOS object from a null external object.");
 		}
+		$DFIId = strval($externalObject->ID);
+		if(!is_numeric($DFIId)) {
+			throw new RuntimeException("Cannot get or create a CHAOS object from an external object with a non-nummeric ID.");
+		} else {
+			$DFIId = intval($DFIId);
+		}
+		
 		$folderId = $this->_CHAOSFolderID;
 		$objectTypeId = $this->_DKAObjectType->ID;
 		// Query for a CHAOS Object that represents the DFI movie.
@@ -475,23 +453,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 		return $results[0];
 	}
 	
-	/**
-	 * This is the "important" method which generates the metadata XML documents from a MovieItem from the DFI service.
-	 * @param \dfi\model\MovieItem $movieItem A particular MovieItem from the DFI service, representing a particular movie.
-	 * @param bool $validateSchema Should the document be validated against the XML schema?
-	 * @throws Exception if $validateSchema is true and the validation fails.
-	 * @return DOMDocument Representing the DFI movie in the DKA Program specific schema.
-	 */
-	protected function generateXML($movieItem, $fileTypes) {
-		$result = array(
-			DKAXMLGenerator::SCHEMA_GUID => DKAXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), false),
-			DKA2XMLGenerator::SCHEMA_GUID => DKA2XMLGenerator::instance()->generateXML(array("movieItem" => $movieItem, "fileTypes" => $fileTypes), true),
-			DFIXMLGenerator::SCHEMA_GUID => DFIXMLGenerator::instance()->generateXML(array("movieItem" => $movieItem), true)
-		);
-		
-		return $result;
-	}
-	
 	// Helpers
 	
 	/**_CHAOSLowResImageFormatID
@@ -506,110 +467,6 @@ class DFIIntoDKAHarvester extends AHarvester {
 			}
 		}
 		return false;
-	}
-	
-	/**
-	 * Extract the revisions for the metadata currently associated with the object.
-	 */
-	public static function extractMetadataRevisions($object) {
-		$result = array();
-		foreach($object->Metadatas as $metadata) {
-			// The schema matches the metadata.
-			$result[strtolower($metadata->MetadataSchemaGUID)] = $metadata->RevisionID;
-		}
-		return $result;
-	}
-	
-	// CHAOS specific methods
-	
-	/**
-	 * Initialize the CHAOS part of the harvester.
-	 * This involves fetching a session from the service,
-	 * authenticating it,
-	 * fetching the metadata schema for the DKA Program content,
-	 * fetching the object type (DKA Program) to identify its id on the CHAOS service,
-	 * fetching the DKA image format to use for images associated with a particular DFI movie,
-	 * fetching the DKA video format to use for movieclips associated with a particular DFI movie,
-	 * fetching the folder on the CHAOS system to use when creating DKA Programs, based on the DFI_FOLDER const. 
-	 * @throws RuntimeException If any service call fails. This might be due to an unadvailable service,
-	 * or an unenticipated change in the protocol.
-	 */
-	protected function CHAOS_initialize() {
-		printf("Creating a session for the CHAOS service on %s using clientGUID %s: ", $this->_CHAOSURL, $this->_CHAOSClientGUID);
-		// Create a new client, a session is automaticly created.
-		timed();
-		$this->_chaos = new PortalClient($this->_CHAOSURL, $this->_CHAOSClientGUID);
-		timed('chaos');
-		if(!$this->_chaos->HasSession()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't establish a session with the CHAOS service, please check the CHAOS_URL configuration parameter.");
-		} else {
-			printf("Succeeded: SessionGUID is %s\n", $this->_chaos->SessionGUID());
-		}
-		timed();
-		$this->CHAOS_authenticateSession();
-		$this->CHAOS_fetchMetadataSchemas();
-		$this->CHAOS_fetchDKAObjectType();
-		timed('chaos');
-		//$this->CHAOS_fetchDFIFolder();
-	}
-	
-	/**
-	 * Authenticate the CHAOS session using the environment variables for email and password.
-	 * @throws RuntimeException If the authentication fails.
-	 */
-	protected function CHAOS_authenticateSession() {
-		printf("Authenticating the session using email %s: ", $this->_CHAOSEmail);
-		$result = $this->_chaos->EmailPassword()->Login($this->_CHAOSEmail, $this->_CHAOSPassword);
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't authenticate the session, please check the CHAOS_EMAIL and CHAOS_PASSWORD parameters.");
-		} else {
-			printf("Succeeded.\n");
-		}
-	}
-	
-	/**
-	 * Fetches the DKA Program metadata schema and stores it in the _DKAMetadataSchema field.
-	 * @throws RuntimeException If it fails.
-	 */
-	protected function CHAOS_fetchMetadataSchemas() {
-		printf("Looking up the DKA metadata schema GUID: ");
-		
-		DKAXMLGenerator::instance()->fetchSchema($this->_chaos);
-		DKA2XMLGenerator::instance()->fetchSchema($this->_chaos);
-		DFIXMLGenerator::instance()->fetchSchema($this->_chaos);
-		
-		printf("Succeeded.\n");
-	}
-	
-	/**
-	 * Fetches the DKA Program object type and stores it in the _DKAObjectType field.
-	 * @throws RuntimeException If it fails.
-	 */
-	protected function CHAOS_fetchDKAObjectType() {
-		printf("Looking up the DKA Program type: ");
-		$result = $this->_chaos->ObjectType()->Get();
-		if(!$result->WasSuccess()) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't lookup the DKA object type for the DKA specific data.");
-		}
-		
-		$this->_DKAObjectType = null;
-		foreach($result->MCM()->Results() as $objectType) {
-			if($objectType->Name === self::DKA_OBJECT_TYPE_NAME) {
-				// We found the DKA Program type.
-				$this->_DKAObjectType = $objectType;
-				break;
-			}
-		}
-		
-		if($this->_DKAObjectType == null) {
-			printf("Failed.\n");
-			throw new RuntimeException("Couldn't find the DKA object type.");
-		} else {
-			printf("Succeeded, it has ID: %s\n", $this->_DKAObjectType->ID);
-		}
 	}
 	
 	// DFI specific methods.
@@ -628,12 +485,12 @@ class DFIIntoDKAHarvester extends AHarvester {
 			printf("Succeeded.\n");
 		}
 		
-		DFIImageExtractor::instance()->_CHAOSImageDestinationID = $this->_CHAOSImageDestinationID;
-		DFIImageExtractor::instance()->_CHAOSImageFormatID = $this->_CHAOSImageFormatID;
-		DFIImageExtractor::instance()->_CHAOSLowResImageFormatID = $this->_CHAOSLowResImageFormatID;
-		DFIImageExtractor::instance()->_CHAOSThumbnailImageFormatID = $this->_CHAOSThumbnailImageFormatID;
-		DFIVideoExtractor::instance()->_CHAOSVideoDestinationID = $this->_CHAOSVideoDestinationID;
-		DFIVideoExtractor::instance()->_CHAOSVideoFormatID = $this->_CHAOSVideoFormatID;
+		dfi\DFIImageExtractor::instance()->_imageDestinationID = $this->_imageDestinationID;
+		dfi\DFIImageExtractor::instance()->_imageFormatID = $this->_imageFormatID;
+		dfi\DFIImageExtractor::instance()->_lowResImageFormatID = $this->_lowResImageFormatID;
+		dfi\DFIImageExtractor::instance()->_thumbnailImageFormatID = $this->_thumbnailImageFormatID;
+		dfi\DFIVideoExtractor::instance()->_videoDestinationID = $this->_videoDestinationID;
+		dfi\DFIVideoExtractor::instance()->_videoFormatID = $this->_videoFormatID;
 	}
 }
 
