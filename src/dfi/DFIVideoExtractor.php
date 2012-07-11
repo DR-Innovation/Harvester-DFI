@@ -36,7 +36,6 @@ class DFIVideoExtractor extends \ACHAOSFileExtractor {
 				if($response == null) {
 					throw new RuntimeException("Failed to create a video file.");
 				} else {
-					$object->ProcessedFiles[] = $response;
 					$videosProcessed[] = $response;
 				}
 			} else {

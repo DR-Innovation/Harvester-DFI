@@ -25,7 +25,7 @@ class DKAMetadataGenerator extends \ACHAOSMetadataGenerator {
 	 */
 	public function generateXML($externalObject, &$extras) {
 		$movieItem = $externalObject;
-		$fileTypes = array_key_exists('fileTypes', $extras) ? $extras["fileTypes"] : array();
+		$fileTypes = self::extractFileTypes($extras['extractedFiles']);
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 		
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));
@@ -189,5 +189,16 @@ class DKAMetadataGenerator extends \ACHAOSMetadataGenerator {
 		} else {
 			throw new InvalidArgumentException('The \$year argument must be null, empty or of length 4, got "'.strval($year).'"');
 		}
+	}
+	
+	public static function extractFileTypes($extractedFiles) {
+		$result = array();
+		if(!empty($extractedFiles['dfi\DFIImageExtractor'])) {
+			$result[] = 'Picture';
+		}
+		if(!empty($extractedFiles['dfi\DFIVideoExtractor'])) {
+			$result[] = 'Video';
+		}
+		return $result;
 	}
 }

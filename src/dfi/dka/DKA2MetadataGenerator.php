@@ -24,7 +24,7 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 	 */
 	public function generateXML($externalObject, &$extras) {
 		$movieItem = $externalObject;
-		$fileTypes = array_key_exists('fileTypes', $extras) ? $extras["fileTypes"] : array();
+		$fileTypes = self::extractFileTypes($extras['extractedFiles']);
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 
 		$result->addChild("Title", htmlspecialchars($movieItem->Title));

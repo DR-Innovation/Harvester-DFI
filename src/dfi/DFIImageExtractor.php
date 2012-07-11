@@ -33,7 +33,6 @@ class DFIImageExtractor extends \ACHAOSFileExtractor {
 			if($response == null) {
 				throw new RuntimeException("Failed to create the main image file.");
 			} else {
-				$object->ProcessedFiles[] = $response;
 				$imagesProcessed[] = $response;
 			}
 		} else {
@@ -68,7 +67,6 @@ class DFIImageExtractor extends \ACHAOSFileExtractor {
 				if($response == null) {
 					throw new RuntimeException("Failed to create an image file.");
 				} else {
-					$object->ProcessedFiles[] = $response;
 					$imagesProcessed[] = $response;
 					$miniImageID = $response->ID;
 				}
@@ -84,7 +82,6 @@ class DFIImageExtractor extends \ACHAOSFileExtractor {
 				if($response == null) {
 					throw new RuntimeException("Failed to create an image file.");
 				} else {
-					$object->ProcessedFiles[] = $response;
 					$imagesProcessed[] = $response;
 				}
 			} else {
