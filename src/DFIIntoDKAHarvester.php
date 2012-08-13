@@ -23,7 +23,7 @@ libxml_use_internal_errors(true);
 
 // Bootstrapping CHAOS - begin 
 if(!isset($_SERVER['INCLUDE_PATH'])) {
-	echo "The INCLUDE_PATH env parameter must be set.";
+	print("The INCLUDE_PATH env parameter must be set.\n");
 	exit(1);
 }
 set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['INCLUDE_PATH']);
