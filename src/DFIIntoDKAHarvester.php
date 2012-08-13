@@ -31,7 +31,7 @@ use dfi\DFIClient;
  * @link       https://github.com/CHAOS-Community/Harvester-DFI
  * @since      Class available since Release 0.1
  */
-class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
+class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * The version information of the harvester.
@@ -58,6 +58,13 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	 * @var string
 	 */
 	protected $_DFIUrl;
+	
+	/**
+	 * The object type of a chaos object, to be used later.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * @var string
+	 */
+	protected $_objectTypeID;
 	
 	/**
 	 * The ID of the format to be used when linking images to a DKA Program.
@@ -102,6 +109,12 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	protected $_videoDestinationID;
 	
 	/**
+	 * The client to use when communicating with the DFI service.
+	 * @var dfi\DFIClient
+	 */
+	protected $_dfi;
+	
+	/**
 	 * Constructor for the DFI Harvester
 	 * @throws RuntimeException if the CHAOS services are unreachable or
 	 * if the CHAOS credentials provided fails to authenticate the session.
@@ -109,6 +122,7 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	public function __construct($args) {
 		// Adding configuration parameters
 		$this->_CONFIGURATION_PARAMETERS["DFI_URL"] = "_DFIUrl";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_OBJECT_TYPE_ID"] = "_objectTypeID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_FORMAT_ID"] = "_imageFormatID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_LOWRES_IMAGE_FORMAT_ID"] = "_lowResImageFormatID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_THUMBNAIL_IMAGE_FORMAT_ID"] = "_thumbnailImageFormatID";
@@ -349,7 +363,7 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 		}
 		
 		$folderId = $this->_CHAOSFolderID;
-		$objectTypeId = $this->_DKAObjectType->ID;
+		$objectTypeId = $this->_objectTypeID;
 		// Query for a CHAOS Object that represents the DFI movie.
 		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
 		//printf("Solr query: %s\n", $query);
