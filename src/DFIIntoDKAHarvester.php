@@ -22,14 +22,10 @@ ini_set('display_errors', '0');
 libxml_use_internal_errors(true);
 
 // Bootstrapping CHAOS - begin 
-if(!isset($_SERVER['CHAOS_CLIENT_SRC'])) {
-	die("The CHAOS_CLIENT_SRC env parameter must point to the src directory of a CHAOS PHP Client");
+if(!isset($_SERVER['INCLUDE_PATH'])) {
+	die("The INCLUDE_PATH env parameter must be set.");
 }
-if(!isset($_SERVER['HARVESTER_BASE_SRC'])) {
-	die("The HARVESTER_BASE_SRC env parameter must point to the src directory of the CHAOS Harvester base.");
-}
-set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['CHAOS_CLIENT_SRC']);
-set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['HARVESTER_BASE_SRC']);
+set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['INCLUDE_PATH']);
 require_once("CaseSensitiveAutoload.php"); // This will be reused by this script.
 spl_autoload_extensions(".php");
 spl_autoload_register("CaseSensitiveAutoload");
@@ -215,6 +211,10 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	}
 	
 	protected function fetchSingle($reference) {
+		if(is_numeric($reference)) {
+			// This is an integer id.
+			$reference = 'http://nationalfilmografien.service.dfi.dk/movie.svc/'.$reference;
+		}
 		$response = MovieItem::fetch($this->_dfi, $reference);
 		$response->registerXPathNamespace('dfi', 'http://schemas.http://api.test.chaos-systems.com/Object/Gdatacontract.org/2004/07/Netmester.DFI.RestService.Items');
 		$response->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
@@ -236,7 +236,9 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	}
 	
 	protected function externalObjectToString($externalObject) {
-		return sprintf("%s [%u]", $externalObject->Title, $externalObject->ID);
+		$title = $externalObject != null ? $externalObject->Title : "Unknown";
+		$id = $externalObject != null ? $externalObject->ID : 0;
+		return sprintf("%s [%u]", $title, $id);
 	}
 	
 	public function getExternalClient() {
@@ -265,22 +267,22 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 		for($i = 0; $i < count($movies); $i++) {
 			$m = $movies[$i];
 			try {
-				printf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
+				sprintf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
 				$start = microtime(true);
 				
 				$this->processMovie($m->Ref, $publish, $accessPointGUID, $skipProcessing);
 				
 				$elapsed = (microtime(true) - $start) * 1000.0;
-				printf("Completed the processing .. took %ums\n", round($elapsed));
+				sprintf("Completed the processing .. took %ums\n", round($elapsed));
 			} catch (Exception $e) {
 				$attempts++;
 				// Initialize CHAOS if the session expired.
 				if(strstr($e->getMessage(), 'Session has expired') !== false) {
-					printf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
+					sprintf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
 					// Reauthenticate!
 					$this->CHAOS_initialize();
 				} else {
-					printf("[!] An error occured: %s.\n", $e->getMessage());
+					sprintf("[!] An error occured: %s.\n", $e->getMessage());
 				}
 				
 				if($attempts > 2) {
