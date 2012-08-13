@@ -17,20 +17,7 @@
  * @since      File available since Release 0.1
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', '0');
-libxml_use_internal_errors(true);
-
-// Bootstrapping CHAOS - begin 
-if(!isset($_SERVER['INCLUDE_PATH'])) {
-	print("The INCLUDE_PATH env parameter must be set.\n");
-	exit(1);
-}
-set_include_path(get_include_path() . PATH_SEPARATOR . $_SERVER['INCLUDE_PATH']);
-require_once("CaseSensitiveAutoload.php"); // This will be reused by this script.
-spl_autoload_extensions(".php");
-spl_autoload_register("CaseSensitiveAutoload");
-// Bootstrapping CHAOS - end
+require "bootstrap.php";
 
 use dfi\model\MovieItem;
 use dfi\DFIClient;
@@ -46,138 +33,73 @@ use dfi\DFIClient;
  */
 class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 	
+	/**
+	 * The version information of the harvester.
+	 * @var string
+	 */
 	const VERSION = "0.1";
-	const DKA_SCHEMA_NAME = "DKA";
-	const DKA2_SCHEMA_NAME = "DKA2";
-	const DFI_SCHEMA_NAME = "DKA.DFI";
+	
+	/**
+	 * This name will be used as the organisation when generating XML.
+	 * @var string
+	 */
 	const DFI_ORGANIZATION_NAME = "Det Danske Filminstitut";
-	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut"; // TODO: Is this correct?
+	
+	/**
+	 * This string will be used as RightsDescription when generating XML.
+	 * @var string
+	 */
+	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut";
+	// TODO: Is this correct?
 	
 	/**
 	 * The URL of the DFI service.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_DFIUrl;
 	
 	/**
 	 * The ID of the format to be used when linking images to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_imageFormatID;
+	
 	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
+	 * The ID of the format to be used when linking lowres-images to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_lowResImageFormatID;
+	
 	/**
-	 * The ID of the format to be used when linking images to a DKA Program.
+	 * The ID of the format to be used when linking thumbnail.images to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_thumbnailImageFormatID;
 	
 	/**
-	 * The ID of the format to be used when linking videos to a DKA Program.
-	 * @var string
-	 */
-	protected $_videoFormatID;
-	/**
 	 * The ID of the format to be used when linking images to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_imageDestinationID;
+	
 	/**
 	 * The ID of the format to be used when linking videos to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * @var string
+	 */
+	protected $_videoFormatID;
+	
+	/**
+	 * The ID of the format to be used when linking videos to a DKA Program.
+	 * Populated when ACHAOSImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_videoDestinationID;
-	
-	/**
-	 * Main method of the harvester, call this once.
-	 */
-	/*
-	function main($args = array()) {
-		printf("DFIIntoDKAHarvester %s started %s.\n", DFIIntoDKAHarvester::VERSION, date('D, d M Y H:i:s'));
-		
-		try {
-			// Processing runtime options.
-			
-			$runtimeOptions = self::extractOptionsFromArguments($args);
-			
-			if(array_key_exists('publish', $runtimeOptions) && array_key_exists('just-publish', $runtimeOptions)) {
-				throw new InvalidArgumentException("Cannot have both publish and just-publish options sat.");
-			}
-			
-			$publish = null;
-			$publishAccessPointGUID = null;
-			$skipProcessing = null;
-			if(array_key_exists('publish', $runtimeOptions)) {
-				$publishAccessPointGUID = $runtimeOptions['publish'];
-				$publish = true;
-			}
-			if(array_key_exists('just-publish', $runtimeOptions)) {
-				$publishAccessPointGUID = $runtimeOptions['just-publish'];
-				$skipProcessing = true;
-				$publish = true;
-			}
-			if($publish === true && array_key_exists('unpublish', $runtimeOptions)) {
-				throw new InvalidArgumentException("Cannot have both publish or just-publish and unpublish options sat.");
-			} elseif(array_key_exists('unpublish', $runtimeOptions)) {
-				$publishAccessPointGUID = $runtimeOptions['unpublish'];
-				$publish = false;
-			}
-
-			// Starting on the real job at hand
-			$starttime = time();
-			$h = new DFIIntoDKAHarvester();
-			if(array_key_exists('range', $runtimeOptions)) {
-				$rangeParams = explode('-', $runtimeOptions['range']);
-				if(count($rangeParams) == 2) {
-					$start = intval($rangeParams[0]);
-					$end = intval($rangeParams[1]);
-					if($end < $start) {
-						throw new InvalidArgumentException("Given a range parameter which has end < start.");
-					}
-					
-					$h->processMovies($start, $end-$start+1, $publish, $publishAccessPointGUID, $skipProcessing);
-				} else {
-					throw new InvalidArgumentException("Given a range parameter was malformed.");
-				}
-			} elseif(array_key_exists('single-id', $runtimeOptions)) {
-				$dfiID = intval($runtimeOptions['single-id']);
-				printf("Updating a single DFI record (#%u).\n", $dfiID);
-				$h->processMovie('http://nationalfilmografien.service.dfi.dk/movie.svc/'.$dfiID, $publish, $publishAccessPointGUID, $skipProcessing);
-				printf("Done.\n", $dfiID);
-			} elseif(array_key_exists('all', $runtimeOptions) && $runtimeOptions['all'] == true) {
-				$h->processMovies(0, null, 0, $publish, $publishAccessPointGUID, $skipProcessing);
-			} else {
-				throw new InvalidArgumentException("None of --all, --single or --range was sat.");
-			}
-		} catch(InvalidArgumentException $e) {
-			echo "\n";
-			printf("Invalid arguments given: %s\n", $e->getMessage());
-			self::printUsage($args);
-			exit;
-		} catch (RuntimeException $e) {
-			echo "\n";
-			printf("An unexpected runtime error occured: %s\n", $e->getMessage());
-			exit;
-		} catch (Exception $e) {
-			echo "\n";
-			printf("Error occured in the harvester implementation: %s\n", $e);
-			exit;
-		}
-		
-		// If the handle to the harvester has not been deallocated already.
-		if($h !== null) {
-			unset($h);
-		}
-		
-		$elapsed = time() - $starttime;
-		timed_print();
-		
-		printf("DFIIntoDKAHarvester exits normally - ran %u seconds.\n", $elapsed);
-	}
-	*/
 	
 	/**
 	 * Constructor for the DFI Harvester
@@ -206,11 +128,20 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 		$this->DFI_initialize();
 	}
 	
+	/**
+	 * This destructs the harvester, this also unsets/destroys the DFI client.
+	 * @see ACHAOSImporter::__destruct()
+	 */
 	public function __destruct() {
 		parent::__destruct();
 		unset($this->_dfi);
 	}
 	
+	/**
+	 * Fetches an external DFI movies as a MovieItem by reference (i.e. the internal DFI id).
+	 * @see ACHAOSImporter::fetchSingle()
+	 * @return MovieItem The deserialized movie item, representing the movie.
+	 */
 	protected function fetchSingle($reference) {
 		if(is_numeric($reference)) {
 			// This is an integer id.
@@ -222,6 +153,10 @@ class DFIIntoDKAHarvester extends ADKACHAOSHarvester {
 		return $response;
 	}
 	
+	/**
+	 * This fetches a range of external DFI movies as an array of references for movies, 
+	 * @see ACHAOSImporter::fetchRange()
+	 */
 	protected function fetchRange($start, $count) {
 		$response = $this->_dfi->fetchMultipleMovies($start, $count, 1000);
 		$result = array();
