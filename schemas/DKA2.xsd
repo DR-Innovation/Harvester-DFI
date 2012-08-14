@@ -1,4 +1,4 @@
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" attributeFormDefault="unqualified" elementFormDefault="qualified">
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="DKA v.2" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dka="DKA v.2">
 	<xs:element name="DKA">
 		<xs:complexType>
 			<xs:sequence>

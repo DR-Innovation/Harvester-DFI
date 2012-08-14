@@ -3,7 +3,7 @@ namespace dfi\dka;
 
 use SimpleXMLElement;
 
-class DFIMetadataGenerator extends \ACHAOSMetadataGenerator {
+class DFIMetadataGenerator extends \AChaosMetadataGenerator {
 	const SCHEMA_NAME = 'DKA.DFI';
 	const SCHEMA_GUID = 'd361328e-4fd2-4cb1-a2b4-37ecc7679a6e';
 	const VALIDATE = true;
@@ -33,7 +33,7 @@ class DFIMetadataGenerator extends \ACHAOSMetadataGenerator {
 	
 	/**
 	 * Sets the schema source fetching it from a chaos system.
-	 * @param CHAOS\Portal\Client\PortalClient $chaosClient
+	 * @param Chaos\Portal\Client\PortalClient $chaosClient
 	 */
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);

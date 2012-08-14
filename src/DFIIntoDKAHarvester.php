@@ -1,8 +1,8 @@
 <?php
 /**
  * This harvester connects to the open API of the Danish Film Institute and
- * copies information on movies into a CHAOS service.
- * It was build to harvest the DFI metadata into the CHAOS deployment used for
+ * copies information on movies into a Chaos service.
+ * It was build to harvest the DFI metadata into the Chaos deployment used for
  * DKA (danskkulturarv.dk).
  *
  * LICENSE: This program is free software: you can redistribute it and/or modify  
@@ -31,7 +31,7 @@ use dfi\DFIClient;
  * @link       https://github.com/CHAOS-Community/Harvester-DFI
  * @since      Class available since Release 0.1
  */
-class DFIIntoDKAHarvester extends ACHAOSImporter {
+class DFIIntoDKAHarvester extends AChaosImporter {
 	
 	/**
 	 * The version information of the harvester.
@@ -54,56 +54,56 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * The URL of the DFI service.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_DFIUrl;
 	
 	/**
 	 * The object type of a chaos object, to be used later.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_objectTypeID;
 	
 	/**
 	 * The ID of the format to be used when linking images to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_imageFormatID;
 	
 	/**
 	 * The ID of the format to be used when linking lowres-images to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_lowResImageFormatID;
 	
 	/**
 	 * The ID of the format to be used when linking thumbnail.images to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_thumbnailImageFormatID;
 	
 	/**
 	 * The ID of the format to be used when linking images to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_imageDestinationID;
 	
 	/**
 	 * The ID of the format to be used when linking videos to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_videoFormatID;
 	
 	/**
 	 * The ID of the format to be used when linking videos to a DKA Program.
-	 * Populated when ACHAOSImporter::loadConfiguration is called.
+	 * Populated when AChaosImporter::loadConfiguration is called.
 	 * @var string
 	 */
 	protected $_videoDestinationID;
@@ -116,8 +116,8 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * Constructor for the DFI Harvester
-	 * @throws RuntimeException if the CHAOS services are unreachable or
-	 * if the CHAOS credentials provided fails to authenticate the session.
+	 * @throws RuntimeException if the Chaos services are unreachable or
+	 * if the Chaos credentials provided fails to authenticate the session.
 	 */
 	public function __construct($args) {
 		// Adding configuration parameters
@@ -144,7 +144,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * This destructs the harvester, this also unsets/destroys the DFI client.
-	 * @see ACHAOSImporter::__destruct()
+	 * @see AChaosImporter::__destruct()
 	 */
 	public function __destruct() {
 		parent::__destruct();
@@ -153,7 +153,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * Fetches an external DFI movies as a MovieItem by reference (i.e. the internal DFI id).
-	 * @see ACHAOSImporter::fetchSingle()
+	 * @see AChaosImporter::fetchSingle()
 	 * @return MovieItem The deserialized movie item, representing the movie.
 	 */
 	protected function fetchSingle($reference) {
@@ -169,7 +169,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	
 	/**
 	 * This fetches a range of external DFI movies as an array of references for movies, 
-	 * @see ACHAOSImporter::fetchRange()
+	 * @see AChaosImporter::fetchRange()
 	 */
 	protected function fetchRange($start, $count) {
 		$response = $this->_dfi->fetchMultipleMovies($start, $count, 1000);
@@ -201,6 +201,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
 	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
 	 */
+	/*
 	public function processMovies($offset = 0, $count = null, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
 		printf("Fetching ids for all movies: ");
 		$start = microtime(true);
@@ -226,11 +227,11 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 				sprintf("Completed the processing .. took %ums\n", round($elapsed));
 			} catch (Exception $e) {
 				$attempts++;
-				// Initialize CHAOS if the session expired.
+				// Initialize Chaos if the session expired.
 				if(strstr($e->getMessage(), 'Session has expired') !== false) {
 					sprintf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
 					// Reauthenticate!
-					$this->CHAOS_initialize();
+					$this->ChaosInitialize();
 				} else {
 					sprintf("[!] An error occured: %s.\n", $e->getMessage());
 				}
@@ -255,6 +256,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 			}
 		}
 	}
+	*/
 	
 	/**
 	 * Fetch and process a single DFI movie.
@@ -264,6 +266,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
 	 * this will most likely happen if the service is broken, or in lack of permissions.
 	 */
+	/*
 	public function processMovie($reference, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
 		$movieItem = MovieItem::fetch($this->_dfi, $reference);
 		if($movieItem === false) {
@@ -276,7 +279,7 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 			return;
 		}
 		
-		// Check to see if this movie is known to CHAOS.
+		// Check to see if this movie is known to Chaos.
 		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_DFIFolder->ID, true, null, 0, 10);
 		$object = $this->getOrCreateObject($movieItem->ID);
 		
@@ -311,13 +314,13 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 				// $currentMetadata = $this->_chaos->Metadata()->Get($object->GUID, $schema->GUID, 'da');
 				//var_dump($currentMetadata);
 				$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
-				printf("\tSetting '%s' metadata on the CHAOS object (overwriting revision %u): ", $schemaGUID, $revision);
+				printf("\tSetting '%s' metadata on the Chaos object (overwriting revision %u): ", $schemaGUID, $revision);
 				timed();
 				$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
 				timed('chaos');
 				if(!$response->WasSuccess()) {
 					printf("Failed.\n");
-					throw new RuntimeException("Couldn't set the metadata on the CHAOS object.");
+					throw new RuntimeException("Couldn't set the metadata on the Chaos object.");
 				} else {
 					printf("Succeeded.\n");
 				}
@@ -337,73 +340,64 @@ class DFIIntoDKAHarvester extends ACHAOSImporter {
 			timed('chaos');
 			if(!$response->WasSuccess() || !$response->MCM()->WasSuccess()) {
 				printf("Failed.\n");
-				throw new RuntimeException("Couldn't set the publish settings on the CHAOS object.");
+				throw new RuntimeException("Couldn't set the publish settings on the Chaos object.");
 			} else {
 				printf("Succeeded.\n");
 			}
 		}
 	}
+	*/
 	
-	/**
-	 * Gets or creates an object in the CHAOS service, which represents a
-	 * particular DFI movie.
-	 * @param int $DFIId The internal id of the movie in the DFI service.
-	 * @throws RuntimeException If the request or creation of the object fails.
-	 * @return stdClass Representing the CHAOS existing or newly created DKA program -object.
-	 */
-	protected function getOrCreateObject($externalObject) {
+	protected function generateChaosQuery($externalObject) {
 		if($externalObject == null) {
-			throw new RuntimeException("Cannot get or create a CHAOS object from a null external object.");
+			throw new RuntimeException("Cannot get or create a Chaos object from a null external object.");
 		}
 		$DFIId = strval($externalObject->ID);
 		if(!is_numeric($DFIId)) {
-			throw new RuntimeException("Cannot get or create a CHAOS object from an external object with a non-nummeric ID.");
+			throw new RuntimeException("Cannot get or create a Chaos object from an external object with a non-nummeric ID.");
 		} else {
 			$DFIId = intval($DFIId);
 		}
 		
-		$folderId = $this->_CHAOSFolderID;
+		$folderId = $this->_ChaosFolderID;
 		$objectTypeId = $this->_objectTypeID;
-		// Query for a CHAOS Object that represents the DFI movie.
+		// Query for a Chaos Object that represents the DFI movie.
+		return "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
+	}
+	
+	protected function getChaosObjectTypeID() {
+		return $this->_objectTypeID;
+	}
+	
+	/**
+	 * Gets or creates an object in the Chaos service, which represents a
+	 * particular DFI movie.
+	 * @param int $DFIId The internal id of the movie in the DFI service.
+	 * @throws RuntimeException If the request or creation of the object fails.
+	 * @return stdClass Representing the Chaos existing or newly created DKA program -object.
+	 */
+	/*
+	protected function getOrCreateObject($externalObject) {
+		if($externalObject == null) {
+			throw new RuntimeException("Cannot get or create a Chaos object from a null external object.");
+		}
+		$DFIId = strval($externalObject->ID);
+		if(!is_numeric($DFIId)) {
+			throw new RuntimeException("Cannot get or create a Chaos object from an external object with a non-nummeric ID.");
+		} else {
+			$DFIId = intval($DFIId);
+		}
+		
+		$folderId = $this->_ChaosFolderID;
+		$objectTypeId = $this->_objectTypeID;
+		// Query for a Chaos Object that represents the DFI movie.
 		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
 		//printf("Solr query: %s\n", $query);
 		//$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
-		timed();
-		$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
-		timed('chaos');
-		//$response = $this->_chaos->Object()->Get("(FolderTree:$folderId AND ObjectTypeID:$objectTypeId)", "DateCreated+desc", null, 0, 100, true, true);
-		
-		if(!$response->WasSuccess()) {
-			throw new RuntimeException("Couldn't complete the request for a movie: (Request error) ". $response->Error()->Message());
-		} else if(!$response->MCM()->WasSuccess()) {
-			throw new RuntimeException("Couldn't complete the request for a movie: (MCM error) ". $response->MCM()->Error()->Message());
-		}
-		
-		$results = $response->MCM()->Results();
-		//var_dump($results);
-		
-		// If it's not there, create it.
-		if($response->MCM()->TotalCount() == 0) {
-			printf("\tFound a film in the DFI service which is not already represented by a CHAOS object.\n");
-			timed();
-			$response = $this->_chaos->Object()->Create($this->_DKAObjectType->ID, $this->_CHAOSFolderID);
-			timed('chaos');
-			if($response == null) {
-				throw new RuntimeException("Couldn't create a DKA Object: response object was null.");
-			} else if(!$response->WasSuccess()) {
-				throw new RuntimeException("Couldn't create a DKA Object: ". $response->Error()->Message());
-			} else if(!$response->MCM()->WasSuccess()) {
-				throw new RuntimeException("Couldn't create a DKA Object: ". $response->MCM()->Error()->Message());
-			} else if ($response->MCM()->TotalCount() != 1) {
-				throw new RuntimeException("Couldn't create a DKA Object .. No errors but no object created.");
-			}
-			$results = $response->MCM()->Results();
-		} else {
-			printf("\tReusing CHAOS object with GUID = %s.\n", $results[0]->GUID);
-		}
 		
 		return $results[0];
 	}
+	*/
 	
 	// Helpers
 	

@@ -10,7 +10,7 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 	
 	/**
 	 * Sets the schema source fetching it from a chaos system.
-	 * @param CHAOS\Portal\Client\PortalClient $chaosClient
+	 * @param Chaos\Portal\Client\PortalClient $chaosClient
 	 */
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);

@@ -1,7 +1,7 @@
 <?php
 namespace dfi;
 use RuntimeException;
-class DFIVideoExtractor extends \ACHAOSFileExtractor {
+class DFIVideoExtractor extends \AChaosFileExtractor {
 	const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 	
 	public $_videoFormatID;
@@ -10,13 +10,17 @@ class DFIVideoExtractor extends \ACHAOSFileExtractor {
 	public static $singleton;
 	/**
 	 * Process the DFI movieitem.
-	 * @param \DFIIntoDKAHarvester $harvester The CHAOS client to use for the importing.
+	 * @param \DFIIntoDKAHarvester $harvester The Chaos client to use for the importing.
 	 * @param dfi\DFIClient $dfiClient The DFI client to use for importing.
 	 * @param dfi\model\Item $movieItem The DFI movie item.
-	 * @param stdClass $object Representing the DKA program in the CHAOS service, of which the images should be added to.
+	 * @param stdClass $object Representing the DKA program in the Chaos service, of which the images should be added to.
 	 * @return array An array of processed files.
 	 */
 	function process($harvester, $object, $movieItem, &$extras) {
+		if($object == null) {
+			throw new Exception("Cannot extract files from an empty object.");
+		}
+		
 		$videosProcessed = array();
 		$urlBase = self::DFI_VIDEO_BASE;
 		
