@@ -6,11 +6,9 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 	const SCHEMA_GUID = '5906a41b-feae-48db-bfb7-714b3e105396';
 	const VALIDATE = true;
 	
-	public static $singleton;
-	
 	/**
 	 * Sets the schema source fetching it from a chaos system.
-	 * @param Chaos\Portal\Client\PortalClient $chaosClient
+	 * @param CHAOS\Portal\Client\PortalClient $chaosClient
 	 */
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);

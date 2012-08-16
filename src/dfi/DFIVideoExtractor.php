@@ -7,7 +7,6 @@ class DFIVideoExtractor extends \AChaosFileExtractor {
 	public $_videoFormatID;
 	public $_videoDestinationID;
 	
-	public static $singleton;
 	/**
 	 * Process the DFI movieitem.
 	 * @param \DFIIntoDKAHarvester $harvester The Chaos client to use for the importing.

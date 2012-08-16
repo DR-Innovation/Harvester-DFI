@@ -8,8 +8,6 @@ class DFIMetadataGenerator extends \AChaosMetadataGenerator {
 	const SCHEMA_GUID = 'd361328e-4fd2-4cb1-a2b4-37ecc7679a6e';
 	const VALIDATE = true;
 	
-	public static $singleton;
-	
 	/**
 	 * Generate XML from some import-specific object.
 	 * @param unknown_type $externalObject
@@ -33,7 +31,7 @@ class DFIMetadataGenerator extends \AChaosMetadataGenerator {
 	
 	/**
 	 * Sets the schema source fetching it from a chaos system.
-	 * @param Chaos\Portal\Client\PortalClient $chaosClient
+	 * @param CHAOS\Portal\Client\PortalClient $chaosClient
 	 */
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);

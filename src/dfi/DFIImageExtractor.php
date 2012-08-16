@@ -8,8 +8,6 @@ class DFIImageExtractor extends \AChaosFileExtractor {
 	public $_lowResImageFormatID;
 	public $_thumbnailImageFormatID;
 	public $_imageDestinationID;
-	
-	public static $singleton;
 	/**
 	 * Process the DFI movieitem.
 	 * @param \DFIIntoDKAHarvester $harvester The Chaos client to use for the importing.

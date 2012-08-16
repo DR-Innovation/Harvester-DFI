@@ -130,12 +130,12 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_DESTINATION_ID"] = "_imageDestinationID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_VIDEO_DESTINATION_ID"] = "_videoDestinationID";
 		// Adding xml generators.
-		$this->_metadataGenerators[] = dfi\dka\DKAMetadataGenerator::instance();
-		$this->_metadataGenerators[] = dfi\dka\DKA2MetadataGenerator::instance();
-		$this->_metadataGenerators[] = dfi\dka\DFIMetadataGenerator::instance();
+		$this->_metadataGenerators[] = new dfi\dka\DKAMetadataGenerator();
+		$this->_metadataGenerators[] = new dfi\dka\DKA2MetadataGenerator();
+		$this->_metadataGenerators[] = new dfi\dka\DFIMetadataGenerator();
 		// Adding file extractors.
-		$this->_fileExtractors[] = dfi\DFIImageExtractor::instance();
-		$this->_fileExtractors[] = dfi\DFIVideoExtractor::instance();
+		$this->_fileExtractors[] = new dfi\DFIImageExtractor();
+		$this->_fileExtractors[] = new dfi\DFIVideoExtractor();
 		
 		parent::__construct($args);
 		
@@ -180,7 +180,7 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		return $result;
 	}
 	
-	protected function initializeExtras(&$extras) {
+	protected function initializeExtras($externalObject, &$extras) {
 		$extras['processedFiles'] = array();
 		$extras['fileTypes'] = array();
 	}

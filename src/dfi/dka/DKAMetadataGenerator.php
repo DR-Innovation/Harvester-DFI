@@ -7,11 +7,9 @@ class DKAMetadataGenerator extends \AChaosMetadataGenerator {
 	const SCHEMA_GUID = '00000000-0000-0000-0000-000063c30000';
 	const VALIDATE = false;
 	
-	public static $singleton;
-	
 	/**
 	 * Sets the schema source fetching it from a chaos system.
-	 * @param Chaos\Portal\Client\PortalClient $chaosClient
+	 * @param CHAOS\Portal\Client\PortalClient $chaosClient
 	 */
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);
