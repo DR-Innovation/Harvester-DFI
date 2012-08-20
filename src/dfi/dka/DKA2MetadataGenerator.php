@@ -63,7 +63,7 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 		}
 		
 		$creators = $result->addChild("Creators");
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:Credits/dfi:CreditListItem') as $creditListItem) {
+		foreach($movieItem->Credits->children() as $creditListItem) {
 			if($this->isCreator($creditListItem->Type)) {
 				$creator = $creators->addChild("Creator");
 				$creator->addAttribute("Name", trim(htmlspecialchars($creditListItem->Name)));

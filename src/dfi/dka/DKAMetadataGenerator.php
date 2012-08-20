@@ -63,7 +63,7 @@ class DKAMetadataGenerator extends \AChaosMetadataGenerator {
 		}
 		
 		$creators = $result->addChild("Creator");
-		foreach($movieItem->xpath('/dfi:MovieItem/dfi:Credits/dfi:CreditListItem') as $creditListItem) {
+		foreach($movieItem->Credits->children() as $creditListItem) {
 			if($this->isCreator($creditListItem->Type)) {
 				$person = $creators->addChild("Person");
 				$person->addAttribute("Name", $creditListItem->Name);

@@ -134,8 +134,8 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		$this->_metadataGenerators[] = new dfi\dka\DKA2MetadataGenerator();
 		$this->_metadataGenerators[] = new dfi\dka\DFIMetadataGenerator();
 		// Adding file extractors.
-		$this->_fileExtractors[] = new dfi\DFIImageExtractor();
-		$this->_fileExtractors[] = new dfi\DFIVideoExtractor();
+		$this->_fileExtractors['image'] = new dfi\DFIImageExtractor();
+		$this->_fileExtractors['video'] = new dfi\DFIVideoExtractor();
 		
 		parent::__construct($args);
 		
@@ -195,159 +195,6 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		return $this->_dfi;
 	}
 	
-	/**
-	 * Fetch and process all advailable DFI movies.
-	 * This method calls fetchAllMovies on the 
-	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
-	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
-	 */
-	/*
-	public function processMovies($offset = 0, $count = null, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
-		printf("Fetching ids for all movies: ");
-		$start = microtime(true);
-		
-		$movies = $this->_dfi->fetchMultipleMovies($offset, $count, 1000);
-		
-		$elapsed = (microtime(true) - $start) * 1000.0;
-		printf("done .. took %ums\n", round($elapsed));
-		
-		$failures = array();
-		
-		$attempts = 0;
-		printf("Iterating over every movie.\n");
-		for($i = 0; $i < count($movies); $i++) {
-			$m = $movies[$i];
-			try {
-				sprintf("Starting to process '%s' DFI#%u (%u/%u)\n", $m->Name, $m->ID, $i+1, count($movies));
-				$start = microtime(true);
-				
-				$this->processMovie($m->Ref, $publish, $accessPointGUID, $skipProcessing);
-				
-				$elapsed = (microtime(true) - $start) * 1000.0;
-				sprintf("Completed the processing .. took %ums\n", round($elapsed));
-			} catch (Exception $e) {
-				$attempts++;
-				// Initialize Chaos if the session expired.
-				if(strstr($e->getMessage(), 'Session has expired') !== false) {
-					sprintf("[!] Session expired while processing the a movie: Creating a new session and trying the movie again.\n");
-					// Reauthenticate!
-					$this->ChaosInitialize();
-				} else {
-					sprintf("[!] An error occured: %s.\n", $e->getMessage());
-				}
-				
-				if($attempts > 2) {
-					$failures[] = array("movie" => $m, "exception" => $e);
-					// Reset
-					$attempts = 0;
-				} else {http://api.test.chaos-systems.com/Object/G
-					// Retry
-					$i--;
-				}
-				continue;
-			}
-		}
-		if(count($failures) == 0) {
-			printf("Done .. no failures occurred.\n");
-		} else {
-			printf("Done .. %u failures occurred:\n", count($failures));
-			foreach ($failures as $failure) {
-				printf("\t\"%s\" (%u): %s\n", $failure["movie"]->Name, $failure["movie"]->ID, $failure["exception"]->getMessage());
-			}
-		}
-	}
-	*/
-	
-	/**
-	 * Fetch and process a single DFI movie.
-	 * @param string $reference the URL address referencing the movie through the DFI service.
-	 * @param null|string $publishAccessPointGUID The AccessPointGUID to use when publishing right now.
-	 * @param boolean $skipProcessing Just skip the processing of the movie, used if one only wants to publish the movie.
-	 * @throws RuntimeException If it fails to set the metadata on a chaos object,
-	 * this will most likely happen if the service is broken, or in lack of permissions.
-	 */
-	/*
-	public function processMovie($reference, $publish = null, $accessPointGUID = null, $skipProcessing = false) {
-		$movieItem = MovieItem::fetch($this->_dfi, $reference);
-		if($movieItem === false) {
-			throw new RuntimeException("The reference ($reference) does not point to valid XML.\n");
-		}
-
-		$shouldBeCensored = self::shouldBeCensored($movieItem);
-		if($shouldBeCensored !== false) {
-			printf("\tSkipping this movie, as it contains material that should be censored: '%s'\n", $shouldBeCensored);
-			return;
-		}
-		
-		// Check to see if this movie is known to Chaos.
-		//$chaosObjects = $this->_chaos->Object()->GetByFolderID($this->_DFIFolder->ID, true, null, 0, 10);
-		$object = $this->getOrCreateObject($movieItem->ID);
-		
-		if(!$skipProcessing) {
-			// We create a list of files that have been processed and reused.
-			$object->ProcessedFiles = array();
-			
-			$imagesProcessed = dfi\DFIImageExtractor::instance()->process($this->_chaos, $object, $this->_dfi, $movieItem);
-			$videosProcessed = dfi\DFIVideoExtractor::instance()->process($this->_chaos, $object, $this->_dfi, $movieItem);
-			
-			$types = array();
-			if(count($imagesProcessed) > 0) {
-				$types[] = "Picture";
-			}
-			if(count($videosProcessed) > 0) {
-				$types[] = "Video";
-			}
-			
-			// Do we have any files on the object which has not been processed by the search?
-			foreach($object->Files as $f) {
-				if(!in_array($f, $object->ProcessedFiles)) {
-					printf("\t[!] The file '%s' (%s) was a file of the object, but not processed, maybe it was deleted from the DFI service.\n", $f->Filename, $f->ID);
-				}
-			}
-			
-			$xml = $this->generateXML($movieItem, $types);
-			
-			$revisions = self::extractMetadataRevisions($object);
-			
-			foreach($xml as $schemaGUID => $metadata) {
-				// This is not implemented.
-				// $currentMetadata = $this->_chaos->Metadata()->Get($object->GUID, $schema->GUID, 'da');
-				//var_dump($currentMetadata);
-				$revision = array_key_exists($schemaGUID, $revisions) ? $revisions[$schemaGUID] : null;
-				printf("\tSetting '%s' metadata on the Chaos object (overwriting revision %u): ", $schemaGUID, $revision);
-				timed();
-				$response = $this->_chaos->Metadata()->Set($object->GUID, $schemaGUID, 'da', $revision, $xml[$schemaGUID]->saveXML());
-				timed('chaos');
-				if(!$response->WasSuccess()) {
-					printf("Failed.\n");
-					throw new RuntimeException("Couldn't set the metadata on the Chaos object.");
-				} else {
-					printf("Succeeded.\n");
-				}
-			}
-		}
-		
-		if($publish === true || $publish === false) {
-			$start = null;
-			if($publish === true) {
-				$start = new DateTime();
-				printf("\tChanging the publish settings for %s to startDate = %s: ", $accessPointGUID, $start->format("Y-m-d H:i:s"));
-			} elseif($publish === false) {
-				printf("\tChanging the publish settings for %s to unpublished: ", $accessPointGUID);
-			}
-			timed();
-			$response = $this->_chaos->Object()->SetPublishSettings($object->GUID, $accessPointGUID, $start);
-			timed('chaos');
-			if(!$response->WasSuccess() || !$response->MCM()->WasSuccess()) {
-				printf("Failed.\n");
-				throw new RuntimeException("Couldn't set the publish settings on the Chaos object.");
-			} else {
-				printf("Succeeded.\n");
-			}
-		}
-	}
-	*/
-	
 	protected function generateChaosQuery($externalObject) {
 		if($externalObject == null) {
 			throw new RuntimeException("Cannot get or create a Chaos object from a null external object.");
@@ -368,36 +215,6 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 	protected function getChaosObjectTypeID() {
 		return $this->_objectTypeID;
 	}
-	
-	/**
-	 * Gets or creates an object in the Chaos service, which represents a
-	 * particular DFI movie.
-	 * @param int $DFIId The internal id of the movie in the DFI service.
-	 * @throws RuntimeException If the request or creation of the object fails.
-	 * @return stdClass Representing the Chaos existing or newly created DKA program -object.
-	 */
-	/*
-	protected function getOrCreateObject($externalObject) {
-		if($externalObject == null) {
-			throw new RuntimeException("Cannot get or create a Chaos object from a null external object.");
-		}
-		$DFIId = strval($externalObject->ID);
-		if(!is_numeric($DFIId)) {
-			throw new RuntimeException("Cannot get or create a Chaos object from an external object with a non-nummeric ID.");
-		} else {
-			$DFIId = intval($DFIId);
-		}
-		
-		$folderId = $this->_ChaosFolderID;
-		$objectTypeId = $this->_objectTypeID;
-		// Query for a Chaos Object that represents the DFI movie.
-		$query = "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
-		//printf("Solr query: %s\n", $query);
-		//$response = $this->_chaos->Object()->Get($query, "DateCreated+desc", null, 0, 100, true, true);
-		
-		return $results[0];
-	}
-	*/
 	
 	// Helpers
 	
@@ -431,12 +248,12 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 			printf("Succeeded.\n");
 		}
 		
-		dfi\DFIImageExtractor::instance()->_imageDestinationID = $this->_imageDestinationID;
-		dfi\DFIImageExtractor::instance()->_imageFormatID = $this->_imageFormatID;
-		dfi\DFIImageExtractor::instance()->_lowResImageFormatID = $this->_lowResImageFormatID;
-		dfi\DFIImageExtractor::instance()->_thumbnailImageFormatID = $this->_thumbnailImageFormatID;
-		dfi\DFIVideoExtractor::instance()->_videoDestinationID = $this->_videoDestinationID;
-		dfi\DFIVideoExtractor::instance()->_videoFormatID = $this->_videoFormatID;
+		$this->_fileExtractors['image']->_imageDestinationID = $this->_imageDestinationID;
+		$this->_fileExtractors['image']->_imageFormatID = $this->_imageFormatID;
+		$this->_fileExtractors['image']->_lowResImageFormatID = $this->_lowResImageFormatID;
+		$this->_fileExtractors['image']->_thumbnailImageFormatID = $this->_thumbnailImageFormatID;
+		$this->_fileExtractors['video']->_videoDestinationID = $this->_videoDestinationID;
+		$this->_fileExtractors['video']->_videoFormatID = $this->_videoFormatID;
 	}
 }
 
