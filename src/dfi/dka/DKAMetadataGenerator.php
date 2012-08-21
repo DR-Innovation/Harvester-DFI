@@ -26,7 +26,13 @@ class DKAMetadataGenerator extends \AChaosMetadataGenerator {
 		$fileTypes = self::extractFileTypes($extras['extractedFiles']);
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
 		
-		$result->addChild("Title", htmlspecialchars($movieItem->Title));
+		$title = "?";
+		if(strlen($externalObject->Title) > 0) {
+			$title = htmlspecialchars($externalObject->Title);
+		} elseif(strlen($externalObject->OriginalTitle)) {
+			$title = htmlspecialchars($externalObject->OriginalTitle);
+		}
+		$result->addChild("Title", trim($title));
 		
 		// TODO: Consider if this is the correct mapping.
 		$result->addChild("Abstract", '');

@@ -17,6 +17,8 @@
  * @since      File available since Release 0.1
  */
 
+use dfi\dka\DKAMetadataGenerator;
+
 require "bootstrap.php";
 
 use dfi\model\MovieItem;
@@ -162,8 +164,8 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 			$reference = 'http://nationalfilmografien.service.dfi.dk/movie.svc/'.$reference;
 		}
 		$response = MovieItem::fetch($this->_dfi, $reference);
-		$response->registerXPathNamespace('dfi', 'http://schemas.http://api.test.chaos-systems.com/Object/Gdatacontract.org/2004/07/Netmester.DFI.RestService.Items');
-		$response->registerXPathNamespace('a', 'http://schemas.microsoft.com/2003/10/Serialization/Arrays');
+		$response->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
+		$response->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
 		return $response;
 	}
 	
@@ -186,7 +188,14 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 	}
 	
 	protected function externalObjectToString($externalObject) {
-		$title = $externalObject != null ? $externalObject->Title : "Unknown";
+		$title = "Unknown";
+		if($externalObject != null) {
+			if(strlen(trim($externalObject->Title)) > 0) {
+				$title = trim($externalObject->Title);
+			} elseif(strlen(trim($externalObject->OriginalTitle))) {
+				$title = trim($externalObject->OriginalTitle);
+			}
+		}
 		$id = $externalObject != null ? $externalObject->ID : 0;
 		return sprintf("%s [%u]", $title, $id);
 	}
@@ -229,6 +238,34 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 				return "The subcategory is $subCategory.";
 			}
 		}
+		$year = null;
+		if(strlen($movieItem->ProductionYear) > 0) {
+			$year = intval($movieItem->ProductionYear);
+		} elseif(strlen($movieItem->ReleaseYear) > 0) {
+			$year = intval($movieItem->ReleaseYear);
+		}
+		if($year < 100) {
+			$year += 1900;
+		}
+		// Harvest only files in this interval: 1896-1959
+		if($year != null && ($year < 1896 || $year > 1959)) {
+			return "The movie was produced or released at year $year which is outside of the desired interval.";
+		}
+		
+		$mediaFiles = 0;
+		// Check that it has images attached.
+		$imagesURL = strval($movieItem->Images);
+		if(!empty($imagesURL)) {
+			$images = $this->_dfi->load($imagesURL);
+			$mediaFiles += $images->count();
+		}
+		// Movies
+		$mediaFiles += $movieItem->FlashMovies->FlashMovieItem->count();
+		$mediaFiles += $movieItem->MainImage->SrcThumb->count();
+		if($mediaFiles < 0) {
+			return "The movie has no medias attached.";
+		}
+		
 		return false;
 	}
 	

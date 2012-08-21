@@ -24,8 +24,14 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 		$movieItem = $externalObject;
 		$fileTypes = self::extractFileTypes($extras['extractedFiles']);
 		$result = new SimpleXMLElement("<?xml version='1.0' encoding='UTF-8' standalone='yes'?><DKA></DKA>");
-
-		$result->addChild("Title", htmlspecialchars($movieItem->Title));
+		
+		$title = "?";
+		if(strlen($externalObject->Title) > 0) {
+			$title = trim(htmlspecialchars($externalObject->Title));
+		} elseif(strlen($externalObject->OriginalTitle)) {
+			$title = trim(htmlspecialchars($externalObject->OriginalTitle));
+		}
+		$result->addChild("Title", $title);
 		
 		// TODO: Consider if this is the correct mapping.
 		$result->addChild("Abstract", '');
