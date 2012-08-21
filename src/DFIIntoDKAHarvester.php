@@ -262,7 +262,7 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		// Movies
 		$mediaFiles += $movieItem->FlashMovies->FlashMovieItem->count();
 		$mediaFiles += $movieItem->MainImage->SrcThumb->count();
-		if($mediaFiles < 0) {
+		if($mediaFiles < 1) {
 			return "The movie has no medias attached.";
 		}
 		
