@@ -10,16 +10,21 @@
 				<xs:element name="Abstract" type="xs:string" />
 				<xs:element name="Description" type="xs:string" />
 				<xs:element name="Organization" type="xs:string" />
-                <xs:element name="ExternalURL" type="xs:string"></xs:element>
-                <xs:element name="Type" type="xs:string" >
-                	<xs:annotation>
-                		<xs:documentation>This field should contain a comma-seperated list of types among:
-Video
-Sound
-Image
-Text
-This field is deprecated as it is only used for filtering on the DKA frontend - it should instead be implemented as a computed solr index from the file formats attached to the object.</xs:documentation>
-                	</xs:annotation></xs:element>
+				<xs:element name="ExternalURL" type="xs:string"></xs:element>
+				<xs:element name="ExternalIdentifier" type="xs:string" minOccurs="0" maxOccurs="1"></xs:element>
+				<xs:element name="Type" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>
+							This field should contain a comma-seperated
+							list of types among: Video Sound Image Text
+							This field is deprecated as it is only used
+							for filtering on the DKA frontend - it
+							should instead be implemented as a computed
+							solr index from the file formats attached to
+							the object.
+						</xs:documentation>
+					</xs:annotation>
+				</xs:element>
 				<xs:element name="CreatedDate" type="xs:dateTime"
 					maxOccurs="1" minOccurs="0" />
 				<xs:element name="FirstPublishedDate" type="xs:dateTime"
