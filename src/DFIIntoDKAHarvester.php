@@ -248,7 +248,9 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 			$year += 1900;
 		}
 		// Harvest only files in this interval: 1896-1959
-		if($year != null && ($year < 1896 || $year > 1959)) {
+		if($year == null) {
+			return "The movie had no year set, so it cannot be determined if its inside the desired interval.";
+		} elseif($year < 1896 || $year > 1959) {
 			return "The movie was produced or released at year $year which is outside of the desired interval.";
 		}
 		
