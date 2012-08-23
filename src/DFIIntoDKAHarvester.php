@@ -244,7 +244,7 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		} elseif(strlen($movieItem->ReleaseYear) > 0) {
 			$year = intval($movieItem->ReleaseYear);
 		}
-		if($year < 100) {
+		if($year != null && $year < 100) {
 			$year += 1900;
 		}
 		// Harvest only files in this interval: 1896-1959
