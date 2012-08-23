@@ -259,7 +259,9 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		$imagesURL = strval($movieItem->Images);
 		if(!empty($imagesURL)) {
 			$images = $this->_dfi->load($imagesURL);
-			$mediaFiles += $images->count();
+			if($images != null) {
+				$mediaFiles += $images->count();
+			}
 		}
 		// Movies
 		$mediaFiles += $movieItem->FlashMovies->FlashMovieItem->count();
