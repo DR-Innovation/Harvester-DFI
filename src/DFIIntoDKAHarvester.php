@@ -124,7 +124,8 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 	public function __construct($args) {
 		// Adding configuration parameters
 		$this->_CONFIGURATION_PARAMETERS["DFI_URL"] = "_DFIUrl";
-		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_OBJECT_TYPE_ID"] = "_objectTypeID";
+		$this->_CONFIGURATION_PARAMETERS["CHAOS_DKA_OBJECT_TYPE_ID"] = "_objectTypeID";
+		
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_IMAGE_FORMAT_ID"] = "_imageFormatID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_LOWRES_IMAGE_FORMAT_ID"] = "_lowResImageFormatID";
 		$this->_CONFIGURATION_PARAMETERS["CHAOS_DFI_THUMBNAIL_IMAGE_FORMAT_ID"] = "_thumbnailImageFormatID";

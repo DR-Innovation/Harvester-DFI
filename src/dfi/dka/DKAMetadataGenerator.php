@@ -112,6 +112,10 @@ class DKAMetadataGenerator extends \AChaosMetadataGenerator {
 		return $dom;
 	}
 	
+	public function getSchemaGUID() {
+		return self::SCHEMA_GUID;
+	}
+	
 	/**
 	 * Applies translation of different types of persons.
 	 * @param string $type The type to be translated.

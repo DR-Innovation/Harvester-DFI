@@ -125,7 +125,7 @@ class DFIClient {
 		// Fetch the website.
 		timed();
 		$result = curl_exec($this->_curlHandle);
-		timed('dfi');
+		timed('external');
 		if($result === false) {
 			throw new RuntimeException("The DFI webservice responeded unsuccessful for url = '$url'.");
 		} else {

@@ -36,4 +36,8 @@ class DFIMetadataGenerator extends \AChaosMetadataGenerator {
 	public function fetchSchema($chaosClient) {
 		return $this->fetchSchemaFromGUID($chaosClient, self::SCHEMA_GUID);
 	}
+	
+	public function getSchemaGUID() {
+		return self::SCHEMA_GUID;
+	}
 }
