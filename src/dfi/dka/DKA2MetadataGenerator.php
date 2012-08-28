@@ -116,4 +116,8 @@ class DKA2MetadataGenerator extends DKAMetadataGenerator {
 		}
 		return $dom;
 	}
+	
+	public function getSchemaGUID() {
+		return self::SCHEMA_GUID;
+	}
 }
