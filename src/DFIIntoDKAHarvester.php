@@ -222,7 +222,7 @@ class DFIIntoDKAHarvester extends AChaosImporter {
 		return "(FolderTree:$folderId AND ObjectTypeID:$objectTypeId AND DKA-DFI-ID:$DFIId)";
 	}
 	
-	protected function getChaosObjectTypeID() {
+	protected function getChaosObjectTypeID($externalObject) {
 		return $this->_objectTypeID;
 	}
 	
