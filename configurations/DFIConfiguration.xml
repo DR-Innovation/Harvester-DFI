@@ -5,8 +5,19 @@
 	xsi:schemaLocation="http://www.example.org/ChaosHarvesterConfiguration ../../Base/schemas/ChaosHarvesterConfiguration.xsd ">
 	<chc:Organisation>Det Danske Filminstitut</chc:Organisation>
 	<chc:Project>Nationalfilmografien</chc:Project>
-	<chc:Description>This is simply a test ..</chc:Description>
-	<chc:Modes>
+	<chc:Description>This is simply a test ..</chc:Description><chc:IncludePaths>
+		<chc:path>/home/creen/Projects/DR/harvesters/Base/src</chc:path>
+		<chc:path>/home/creen/Projects/DR/harvesters/chaos-client/src</chc:path>
+		<chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
+		<chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
+	</chc:IncludePaths>
+	<chc:ChaosConfiguration>
+		<chc:URL fromEnvironment="CHAOS_URL"></chc:URL>
+		<chc:Email fromEnvironment="CHAOS_EMAIL" />
+		<chc:Password fromEnvironment="CHAOS_PASSWORD" />
+	</chc:ChaosConfiguration><chc:ExternalClient name="dfi" className="DFIClient" namespace="\CHAOS\Harvester\DFI">
+		<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
+	</chc:ExternalClient><chc:Modes>
 		<chc:Mode className="BasicAllMode" type="All"
 			namespace="\CHAOS\Harvester\DFI" name="all" />
 		<chc:Mode className="BasicSingleByReferenceMode" type="SingleByReference"
@@ -28,21 +39,46 @@
 		  		]]></chc:EmbeddedFilter -->
 			</chc:Filters>
 			<chc:FolderId>-1</chc:FolderId>
+			<chc:ObjectTypeId>-1</chc:ObjectTypeId>
 		</chc:ObjectProcessor>
+		<chc:MetadataProcessor className="MovieMetadataDFIProcessor"
+			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dfi">
+			<chc:validate>true</chc:validate>
+			<chc:schemaGUID>d361328e-4fd2-4cb1-a2b4-37ecc7679a6e</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:MetadataProcessor className="MovieMetadataDKAProcessor"
+			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dka">
+			<chc:validate>false</chc:validate>
+			<chc:schemaGUID>00000000-0000-0000-0000-000063c30000</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:MetadataProcessor className="MovieMetadataDKA2Processor"
+			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dka2">
+			<chc:validate>true</chc:validate>
+			<chc:schemaGUID>5906a41b-feae-48db-bfb7-714b3e105396</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:FileProcessor className="VideoFileProcessor"
+			name='movie_file_video' namespace="\CHAOS\Harvester\DFI">
+			<chc:Format>
+				<chc:Type>chc:Type</chc:Type>
+				<chc:Id>chc:Id</chc:Id>
+			</chc:Format>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="ImageFileProcessor"
+			name='movie_file_image' namespace="\CHAOS\Harvester\DFI">
+			<chc:Format>
+				<chc:Type>chc:Type</chc:Type>
+				<chc:Id>chc:Id</chc:Id>
+			</chc:Format>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="MainImageFileProcessor"
+			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI">
+			<chc:Format>
+				<chc:Type>chc:Type</chc:Type>
+				<chc:Id>chc:Id</chc:Id>
+			</chc:Format>
+		</chc:FileProcessor>
 	</chc:Processors>
-	<chc:ChaosConfiguration>
-		<chc:URL fromEnvironment="CHAOS_URL" />
-		<chc:Email fromEnvironment="CHAOS_EMAIL" />
-		<chc:Password fromEnvironment="CHAOS_PASSWORD" />
-	</chc:ChaosConfiguration>
-	<chc:ExternalClient name="dfi" className="DFIClient"
-		namespace="\CHAOS\Harvester\DFI">
-		<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
-	</chc:ExternalClient>
-	<chc:IncludePaths>
-		<chc:path>/home/creen/Projects/DR/harvesters/Base/src</chc:path>
-		<chc:path>/home/creen/Projects/DR/harvesters/chaos-client/src</chc:path>
-		<chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
-		<chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
-	</chc:IncludePaths>
+	
+	
+	
 </chc:ChaosHarvesterConfiguration>
