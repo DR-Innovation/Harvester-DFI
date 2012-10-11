@@ -1,6 +1,6 @@
 <?php
 namespace CHAOS\Harvester\DFI;
-class BasicObjectProcessor extends \CHAOS\Harvester\ObjectProcessor implements \CHAOS\Harvester\Loadable {
+class MovieObjectProcessor extends \CHAOS\Harvester\ObjectProcessor implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;

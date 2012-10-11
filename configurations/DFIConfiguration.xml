@@ -1,36 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<chc:ChaosHarvesterConfiguration xmlns:chc="http://www.example.org/ChaosHarvesterConfiguration" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.example.org/ChaosHarvesterConfiguration ../../Base/schemas/ChaosHarvesterConfiguration.xsd ">
-  <chc:Organisation>Det Danske Filminstitut</chc:Organisation>
-  <chc:Project>Nationalfilmografien</chc:Project>
-  <chc:Description>This is simply a test ..</chc:Description>
-  <chc:Modes>
-  	<chc:Mode className="BasicAllMode" type="All"
-  		namespace="\CHAOS\Harvester\DFI" name="all" /></chc:Modes>
-  <chc:Processors>
-  	<chc:ObjectProcessor className="BasicObjectProcessor"
-  		namespace="\CHAOS\Harvester\DFI" name="basic">
-  		<chc:FolderId>-1</chc:FolderId>
-  	</chc:ObjectProcessor>
-  </chc:Processors>
-  <chc:Filters>
-  	<chc:Filter className="BasicFilter"
-  		namespace="\CHAOS\Harvester\DFI" name="basic" />
-  	<chc:EmbeddedFilter language="PHP" name="embedded">
-  		var_dump("Embedded filter:", $externalObject); return true;
-  	</chc:EmbeddedFilter>
-  </chc:Filters>
-  <chc:ChaosConfiguration>
-    <chc:URL fromEnvironment="CHAOS_URL"/>
-    <chc:Email fromEnvironment="CHAOS_EMAIL"/>
-    <chc:Password fromEnvironment="CHAOS_PASSWORD"/>
-  </chc:ChaosConfiguration>
-  <chc:ExternalClient name="dfi" className="DFIClient" namespace="\CHAOS\Harvester\DFI">
-  	<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
-  </chc:ExternalClient>
-  <chc:IncludePaths>
-    <chc:path>/home/creen/Projects/DR/harvesters/Base/src</chc:path>
-    <chc:path>/home/creen/Projects/DR/harvesters/chaos-client/src</chc:path>
-    <chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
-    <chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
-  </chc:IncludePaths>
+<chc:ChaosHarvesterConfiguration
+	xmlns:chc="http://www.example.org/ChaosHarvesterConfiguration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.example.org/ChaosHarvesterConfiguration ../../Base/schemas/ChaosHarvesterConfiguration.xsd ">
+	<chc:Organisation>Det Danske Filminstitut</chc:Organisation>
+	<chc:Project>Nationalfilmografien</chc:Project>
+	<chc:Description>This is simply a test ..</chc:Description>
+	<chc:Modes>
+		<chc:Mode className="BasicAllMode" type="All"
+			namespace="\CHAOS\Harvester\DFI" name="all" />
+		<chc:Mode className="BasicSingleByReferenceMode" type="SingleByReference"
+			namespace="\CHAOS\Harvester\DFI" name="single-reference" />
+	</chc:Modes>
+	<chc:Processors>
+		<chc:ObjectProcessor className="MovieObjectProcessor"
+			namespace="\CHAOS\Harvester\DFI" name="movie">
+			<chc:Filters>
+				<chc:Filter className="BasicMovieFilter" namespace="\CHAOS\Harvester\DFI"
+					name="basic" />
+				<!-- chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
+		  		$releaseYear = intval($externalObject->ReleaseYear);
+		  		if($releaseYear > 1900 && $releaseYear < 1970) {
+		  			return true;
+		  		} else {
+		  			return "The movie's release year was not in ]1900:1970[";
+		  		}
+		  		]]></chc:EmbeddedFilter -->
+			</chc:Filters>
+			<chc:FolderId>-1</chc:FolderId>
+		</chc:ObjectProcessor>
+	</chc:Processors>
+	<chc:ChaosConfiguration>
+		<chc:URL fromEnvironment="CHAOS_URL" />
+		<chc:Email fromEnvironment="CHAOS_EMAIL" />
+		<chc:Password fromEnvironment="CHAOS_PASSWORD" />
+	</chc:ChaosConfiguration>
+	<chc:ExternalClient name="dfi" className="DFIClient"
+		namespace="\CHAOS\Harvester\DFI">
+		<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
+	</chc:ExternalClient>
+	<chc:IncludePaths>
+		<chc:path>/home/creen/Projects/DR/harvesters/Base/src</chc:path>
+		<chc:path>/home/creen/Projects/DR/harvesters/chaos-client/src</chc:path>
+		<chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
+		<chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
+	</chc:IncludePaths>
 </chc:ChaosHarvesterConfiguration>

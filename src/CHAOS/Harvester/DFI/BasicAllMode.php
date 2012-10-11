@@ -23,9 +23,10 @@ class BasicAllMode extends \CHAOS\Harvester\AllMode implements \CHAOS\Harvester\
 		$this->_harvester->info("Fetching references to all movies.");
 		$movies = $dfi->fetchMultipleMovies();
 		foreach($movies as $movie) {
+			print("\n");
 			$this->_harvester->info("Fetching external object of '%s' #%s.", $movie->Name, $movie->ID);
 			$movieObject = $dfi->load($movie->Ref);
-			$this->_harvester->process($movieObject);
+			$this->_harvester->process('movie', $movieObject);
 		}
 	}
 }
