@@ -1,8 +1,8 @@
 <?php
-namespace CHAOS\Harvester\DFI;
+namespace CHAOS\Harvester\DFI\Processors;
 use CHAOS\Harvester\Shadows\ObjectShadow;
 
-class MovieObjectProcessor extends \CHAOS\Harvester\ObjectProcessor implements \CHAOS\Harvester\Loadable {
+class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;
@@ -11,7 +11,7 @@ class MovieObjectProcessor extends \CHAOS\Harvester\ObjectProcessor implements \
 	
 	public function process($externalObject, $shadow = null) {
 		$this->_harvester->debug(__CLASS__." is processing.");
-		$this->_harvester->info("\tProcessing '%s' #%d", $externalObject->Title, $externalObject->ID);
+		$this->_harvester->info("Processing '%s' #%d", $externalObject->Title, $externalObject->ID);
 		
 		$shadow = new ObjectShadow();
 		$shadow->query = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
@@ -21,8 +21,13 @@ class MovieObjectProcessor extends \CHAOS\Harvester\ObjectProcessor implements \
 		$shadow = $this->_harvester->process('movie_metadata_dka', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_metadata_dka2', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_video', $externalObject, $shadow);
-		$shadow = $this->_harvester->process('movie_file_image', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_main_image', $externalObject, $shadow);
+		$shadow = $this->_harvester->process('movie_file_images', $externalObject, $shadow);
+		$shadow = $this->_harvester->process('movie_file_lowres_images', $externalObject, $shadow);
+		
+		if($this->_harvester->hasOption('debug')) {
+			var_dump($shadow);
+		}
 		return $shadow;
 	}
 }

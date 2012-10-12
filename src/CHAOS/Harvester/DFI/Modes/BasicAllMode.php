@@ -1,6 +1,6 @@
 <?php
-namespace CHAOS\Harvester\DFI;
-class BasicAllMode extends \CHAOS\Harvester\AllMode implements \CHAOS\Harvester\Loadable {
+namespace CHAOS\Harvester\DFI\Modes;
+class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;
@@ -26,7 +26,11 @@ class BasicAllMode extends \CHAOS\Harvester\AllMode implements \CHAOS\Harvester\
 			print("\n");
 			$this->_harvester->info("Fetching external object of '%s' #%s.", $movie->Name, $movie->ID);
 			$movieObject = $dfi->load($movie->Ref);
-			$this->_harvester->process('movie', $movieObject);
+			$movieObject->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
+			$movieObject->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+			
+			$movieShadow = $this->_harvester->process('movie', $movieObject);
+			$movieShadow->commit($this->_harvester);
 		}
 	}
 }

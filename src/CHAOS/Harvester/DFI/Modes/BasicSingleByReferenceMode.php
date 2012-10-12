@@ -1,6 +1,6 @@
 <?php
-namespace CHAOS\Harvester\DFI;
-class BasicSingleByReferenceMode extends \CHAOS\Harvester\SingleByReferenceMode implements \CHAOS\Harvester\Loadable {
+namespace CHAOS\Harvester\DFI\Modes;
+class BasicSingleByReferenceMode extends \CHAOS\Harvester\Modes\SingleByReferenceMode implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;
@@ -25,12 +25,13 @@ class BasicSingleByReferenceMode extends \CHAOS\Harvester\SingleByReferenceMode 
 			$reference = 'http://nationalfilmografien.service.dfi.dk/movie.svc/'.$reference;
 		}
 		
-		$response = $dfi->load($reference);
-		$response->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
-		$response->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+		$movieObject = $dfi->load($reference);
+		$movieObject->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
+		$movieObject->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
 		
 		print("\n");
 		$this->_harvester->info("Fetching external object of %s.", $reference);
-		$this->_harvester->process('movie', $response);
+		$movieShadow = $this->_harvester->process('movie', $movieObject);
+		$movieShadow->commit($this->_harvester);
 	}
 }

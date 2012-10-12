@@ -1,8 +1,8 @@
 <?php
-namespace CHAOS\Harvester\DFI;
+namespace CHAOS\Harvester\DFI\Processors;
 use \SimpleXMLElement;
 
-class MovieMetadataDKA2Processor extends MovieMetadataDKAProcessor {
+class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 	
 	public function generateMetadata($externalObject, $shadow = null) {
 		$this->_harvester->debug(__CLASS__." is generating metadata.");

@@ -1,8 +1,8 @@
 <?php
-namespace CHAOS\Harvester\DFI;
+namespace CHAOS\Harvester\DFI\Processors;
 use \SimpleXMLElement;
 
-class MovieMetadataDFIProcessor extends \CHAOS\Harvester\MetadataProcessor implements \CHAOS\Harvester\Loadable {
+class DFIMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProcessor implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;

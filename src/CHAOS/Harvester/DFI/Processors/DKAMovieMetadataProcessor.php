@@ -1,8 +1,8 @@
 <?php
-namespace CHAOS\Harvester\DFI;
+namespace CHAOS\Harvester\DFI\Processors;
 use \SimpleXMLElement;
 
-class MovieMetadataDKAProcessor extends \CHAOS\Harvester\MetadataProcessor implements \CHAOS\Harvester\Loadable {
+class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProcessor implements \CHAOS\Harvester\Loadable {
 	
 	/**
 	 * This name will be used as the organisation when generating XML.

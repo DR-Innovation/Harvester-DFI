@@ -19,15 +19,15 @@
 		<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
 	</chc:ExternalClient><chc:Modes>
 		<chc:Mode className="BasicAllMode" type="All"
-			namespace="\CHAOS\Harvester\DFI" name="all" />
+			namespace="\CHAOS\Harvester\DFI\Modes" name="all" />
 		<chc:Mode className="BasicSingleByReferenceMode" type="SingleByReference"
-			namespace="\CHAOS\Harvester\DFI" name="single-reference" />
+			namespace="\CHAOS\Harvester\DFI\Modes" name="single-reference" />
 	</chc:Modes>
 	<chc:Processors>
 		<chc:ObjectProcessor className="MovieObjectProcessor"
-			namespace="\CHAOS\Harvester\DFI" name="movie">
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie">
 			<chc:Filters>
-				<chc:Filter className="BasicMovieFilter" namespace="\CHAOS\Harvester\DFI"
+				<chc:Filter className="BasicMovieFilter" namespace="\CHAOS\Harvester\DFI\Filters"
 					name="basic" />
 				<!-- chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
 		  		$releaseYear = intval($externalObject->ReleaseYear);
@@ -38,44 +38,43 @@
 		  		}
 		  		]]></chc:EmbeddedFilter -->
 			</chc:Filters>
-			<chc:FolderId>-1</chc:FolderId>
-			<chc:ObjectTypeId>-1</chc:ObjectTypeId>
+			<chc:FolderId>2</chc:FolderId>
+			<chc:ObjectTypeId>36</chc:ObjectTypeId>
 		</chc:ObjectProcessor>
-		<chc:MetadataProcessor className="MovieMetadataDFIProcessor"
-			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dfi">
+		<chc:MetadataProcessor className="DFIMovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dfi">
 			<chc:validate>true</chc:validate>
 			<chc:schemaGUID>d361328e-4fd2-4cb1-a2b4-37ecc7679a6e</chc:schemaGUID>
 		</chc:MetadataProcessor>
-		<chc:MetadataProcessor className="MovieMetadataDKAProcessor"
-			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dka">
+		<chc:MetadataProcessor className="DKAMovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dka">
 			<chc:validate>false</chc:validate>
 			<chc:schemaGUID>00000000-0000-0000-0000-000063c30000</chc:schemaGUID>
 		</chc:MetadataProcessor>
-		<chc:MetadataProcessor className="MovieMetadataDKA2Processor"
-			namespace="\CHAOS\Harvester\DFI" name="movie_metadata_dka2">
+		<chc:MetadataProcessor className="DKA2MovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dka2">
 			<chc:validate>true</chc:validate>
 			<chc:schemaGUID>5906a41b-feae-48db-bfb7-714b3e105396</chc:schemaGUID>
 		</chc:MetadataProcessor>
 		<chc:FileProcessor className="VideoFileProcessor"
-			name='movie_file_video' namespace="\CHAOS\Harvester\DFI">
-			<chc:Format>
-				<chc:Type>chc:Type</chc:Type>
-				<chc:Id>chc:Id</chc:Id>
-			</chc:Format>
-		</chc:FileProcessor>
-		<chc:FileProcessor className="ImageFileProcessor"
-			name='movie_file_image' namespace="\CHAOS\Harvester\DFI">
-			<chc:Format>
-				<chc:Type>chc:Type</chc:Type>
-				<chc:Id>chc:Id</chc:Id>
-			</chc:Format>
+			name='movie_file_video' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>1</chc:FormatId>
+			<chc:DestinationId>2</chc:DestinationId>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="MainImageFileProcessor"
-			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI">
-			<chc:Format>
-				<chc:Type>chc:Type</chc:Type>
-				<chc:Id>chc:Id</chc:Id>
-			</chc:Format>
+			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>9</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="ImageFileProcessor"
+			name='movie_file_images' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>3</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="LowresImageFileProcessor"
+			name='movie_file_lowres_images' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>8</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
 		</chc:FileProcessor>
 	</chc:Processors>
 	

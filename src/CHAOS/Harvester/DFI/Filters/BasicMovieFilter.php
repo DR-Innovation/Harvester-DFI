@@ -1,6 +1,6 @@
 <?php
-namespace CHAOS\Harvester\DFI;
-class BasicMovieFilter extends \CHAOS\Harvester\Filter implements \CHAOS\Harvester\Loadable {
+namespace CHAOS\Harvester\DFI\Filters;
+class BasicMovieFilter extends \CHAOS\Harvester\Filters\Filter implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name) {
 		$this->_harvester = $harvester;
