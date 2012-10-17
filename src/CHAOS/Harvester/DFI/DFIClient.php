@@ -30,4 +30,11 @@ class DFIClient extends \dfi\DFIClient implements \CHAOS\Harvester\IExternalClie
 		}
 		return $result;
 	}
+	
+	public function load($url, $class_name = null) {
+		timed();
+		$result = parent::load($url, $class_name);
+		timed('dfi');
+		return $result;
+	}
 }

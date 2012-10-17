@@ -30,7 +30,9 @@ class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harv
 			$movieObject->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
 			
 			$movieShadow = $this->_harvester->process('movie', $movieObject);
+			timed();
 			$movieShadow->commit($this->_harvester);
+			timed('chaos');
 		}
 	}
 }

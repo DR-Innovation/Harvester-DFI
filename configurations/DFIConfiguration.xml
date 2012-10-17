@@ -12,7 +12,7 @@
 		<chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
 	</chc:IncludePaths>
 	<chc:ChaosConfiguration>
-		<chc:URL fromEnvironment="CHAOS_URL"></chc:URL>
+		<chc:URL fromEnvironment="CHAOS_URL" />
 		<chc:Email fromEnvironment="CHAOS_EMAIL" />
 		<chc:Password fromEnvironment="CHAOS_PASSWORD" />
 	</chc:ChaosConfiguration><chc:ExternalClient name="dfi" className="DFIClient" namespace="\CHAOS\Harvester\DFI">

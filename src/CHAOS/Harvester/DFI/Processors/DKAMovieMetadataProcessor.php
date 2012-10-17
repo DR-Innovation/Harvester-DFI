@@ -26,7 +26,8 @@ class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProc
 		
 		// TODO: Generate this from the shadow.
 		//$fileTypes = self::extractFileTypes($extras['extractedFiles']);
-		$fileTypes = array();$result = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><DKA xmlns="http://www.danskkulturarv.dk/DKA.xsd"></DKA>');
+		$fileTypes = array();
+		$result = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><DKA xmlns="http://www.danskkulturarv.dk/DKA.xsd"></DKA>');
 		
 		$title = "?";
 		if(strlen($externalObject->Title) > 0) {
