@@ -2,7 +2,7 @@
 namespace CHAOS\Harvester\DFI\Modes;
 class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harvester\Loadable {
 	
-	public function __construct($harvester, $name) {
+	public function __construct($harvester, $name, $parameters = null) {
 		$this->_harvester = $harvester;
 		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
 	}

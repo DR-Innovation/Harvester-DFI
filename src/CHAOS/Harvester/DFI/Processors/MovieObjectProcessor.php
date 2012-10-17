@@ -4,7 +4,7 @@ use CHAOS\Harvester\Shadows\ObjectShadow;
 
 class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor implements \CHAOS\Harvester\Loadable {
 	
-	public function __construct($harvester, $name) {
+	public function __construct($harvester, $name, $parameter = null) {
 		$this->_harvester = $harvester;
 		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
 	}

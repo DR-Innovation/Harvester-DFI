@@ -8,15 +8,12 @@ class DFIClient extends \dfi\DFIClient implements \CHAOS\Harvester\IExternalClie
 	 */
 	protected $harvester;
 	
-	public function __construct($harvester, $name) {
-		$this->_harvester = $harvester;
-		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
-	}
-	
 	protected $_parameters;
 	
-	public function setParameters($parameters) {
-		$this->_harvester->debug("A ".__CLASS__." got new parameters.");
+	public function __construct($harvester, $name, $parameters = array()) {
+		$this->_harvester = $harvester;
+		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
+		
 		$this->_parameters = $parameters;
 		if(key_exists('URL', $this->_parameters)) {
 			$this->_baseURL = $this->_parameters['URL'];

@@ -4,9 +4,10 @@ use \SimpleXMLElement;
 
 class DFIMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProcessor implements \CHAOS\Harvester\Loadable {
 	
-	public function __construct($harvester, $name) {
+	public function __construct($harvester, $name, $parameters = null) {
 		$this->_harvester = $harvester;
 		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
+		$this->setParameters($parameters);
 	}
 	
 	public function generateMetadata($externalObject, $shadow = null) {
