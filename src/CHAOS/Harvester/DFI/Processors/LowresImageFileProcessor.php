@@ -21,35 +21,25 @@ class LowresImageFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor
 		
 		$images = $this->_harvester->getExternalClient('dfi')->load($imagesRef);
 		
+		$position = 0;
 		$urlBase = self::DFI_IMAGE_SCANPIX_BASE_PATH;
 		foreach($images->PictureItem as $i) {
 			$filenameMatches = array();
 			if(preg_match("#$urlBase(.*)#", $i->SrcThumb, $filenameMatches) === 1) {
 				$pathinfo = pathinfo($filenameMatches[1]);
 				$fileShadow = $this->createFileShadow($pathinfo['dirname'], $pathinfo['basename']);
+				
 				// Find the highres version of this file.
-				$highresFile = array_filter($shadow->fileShadows, $this->createIsHighresFile($fileShadow));
-				if(count($highresFile) == 1) {
-					$fileShadow->parentFileShadow = array_pop($highresFile);
-				}
+				$fileShadow->parentFileShadow = $shadow->fileShadows[$position];
 				
 				$shadow->fileShadows[] = $fileShadow;
+				$position++;
 			} else {
 				trigger_error("Found an image with unknown URL.\n", E_USER_WARNING);
 			}
 		}
 	
 		return $shadow;
-	}
-	
-	/**
-	 * 
-	 * @param FileShadow $lowresFile
-	 */
-	function createIsHighresFile($lowresFile) {
-		return function($file) use($lowresFile) {
-			return $lowresFile->originalFilename == $file->originalFilename;
-		};
 	}
 	
 }

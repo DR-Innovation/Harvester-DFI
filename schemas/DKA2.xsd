@@ -1,4 +1,13 @@
-<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://www.danskkulturarv.dk/DKA2.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dka2="http://www.danskkulturarv.dk/DKA2.xsd">
+<xs:schema attributeFormDefault="unqualified"
+	elementFormDefault="qualified"
+	targetNamespace="http://www.danskkulturarv.dk/DKA2.xsd"
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:dka2="http://www.danskkulturarv.dk/DKA2.xsd"
+	xmlns:xhtml="http://www.w3.org/1999/xhtml">
+	<xs:import
+		schemaLocation="http://www.w3.org/2002/08/xhtml/xhtml1-transitional.xsd"
+		namespace="http://www.w3.org/1999/xhtml">
+	</xs:import>
 	<xs:element name="DKA">
 		<xs:complexType>
 			<xs:sequence>
@@ -8,10 +17,18 @@
 					</xs:annotation>
 				</xs:element>
 				<xs:element name="Abstract" type="xs:string" />
-				<xs:element name="Description" type="xs:string" />
+				<xs:element name="Description">
+					<xs:complexType>
+						<xs:complexContent>
+							<xs:extension base="xhtml:Flow"></xs:extension>
+						</xs:complexContent>
+					</xs:complexType>
+				</xs:element>
 				<xs:element name="Organization" type="xs:string" />
 				<xs:element name="ExternalURL" type="xs:string"></xs:element>
-				<xs:element name="ExternalIdentifier" type="xs:string" minOccurs="0" maxOccurs="1"></xs:element>
+				<xs:element name="ExternalIdentifier" type="xs:string"
+					minOccurs="0" maxOccurs="1">
+				</xs:element>
 				<xs:element name="Type" type="xs:string">
 					<xs:annotation>
 						<xs:documentation>
