@@ -5,11 +5,13 @@
 	xsi:schemaLocation="http://www.example.org/ChaosHarvesterConfiguration ../../Base/schemas/ChaosHarvesterConfiguration.xsd ">
 	<chc:Organisation>Det Danske Filminstitut</chc:Organisation>
 	<chc:Project>Nationalfilmografien</chc:Project>
-	<chc:Description>This is simply a test ..</chc:Description><chc:IncludePaths>
-		<chc:path>/home/creen/Projects/DR/harvesters/Base/src</chc:path>
-		<chc:path>/home/creen/Projects/DR/harvesters/chaos-client/src</chc:path>
+	<chc:Description>This is simply a test ..</chc:Description>
+	<chc:BasePath fromEnvironment="BASEPATH" />
+	<chc:IncludePaths>
+		<chc:path>Base/src</chc:path>
+		<chc:path>/chaos-client/src</chc:path>
 		<chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
-		<chc:path>/home/creen/Projects/DR/harvesters/DFI/src</chc:path>
+		<chc:path>DFI/src</chc:path>
 	</chc:IncludePaths>
 	<chc:ChaosConfiguration>
 		<chc:URL fromEnvironment="CHAOS_URL" />
@@ -27,16 +29,38 @@
 		<chc:ObjectProcessor className="MovieObjectProcessor"
 			namespace="\CHAOS\Harvester\DFI\Processors" name="movie">
 			<chc:Filters>
-				<chc:Filter className="BasicMovieFilter" namespace="\CHAOS\Harvester\DFI\Filters"
-					name="basic" />
-				<!-- chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
-		  		$releaseYear = intval($externalObject->ReleaseYear);
-		  		if($releaseYear > 1900 && $releaseYear < 1970) {
-		  			return true;
-		  		} else {
-		  			return "The movie's release year was not in ]1900:1970[";
-		  		}
-		  		]]></chc:EmbeddedFilter -->
+				<chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
+				foreach($externalObject->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
+					if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
+						return "The subcategory is $subCategory.";
+					}
+				}
+				$year = null;
+				if(strlen($externalObject->ProductionYear) > 0) {
+					$year = intval($externalObject->ProductionYear);
+				} elseif(strlen($externalObject->ReleaseYear) > 0) {
+					$year = intval($externalObject->ReleaseYear);
+				}
+				if($year != null && $year < 100) {
+					$year += 1900;
+				}
+				// Harvest only files in this interval: 1896-1959
+				if($year == null) {
+					return "The movie had no year set, so it cannot be determined if its inside the desired interval.";
+				} elseif($year < 1896 || $year > 1959) {
+					return "The movie was produced or released at year $year which is outside of the desired interval.";
+				}
+		
+				$mediaFiles = 0;
+				// Movies
+				$mediaFiles += $externalObject->FlashMovies->FlashMovieItem->count();
+				$mediaFiles += $externalObject->MainImage->SrcThumb->count();
+				if($mediaFiles < 1) {
+					return "The movie has no medias attached.";
+				}
+		
+				return true;
+		  		]]></chc:EmbeddedFilter>
 			</chc:Filters>
 			<chc:FolderId>2</chc:FolderId>
 			<chc:ObjectTypeId>36</chc:ObjectTypeId>
