@@ -127,6 +127,9 @@ class DFIClient {
 		if($result === false) {
 			throw new RuntimeException("The DFI webservice responeded unsuccessful for url = '$url'.");
 		} else {
+			if(strstr($result, 'No item with the requested ID was found in the database') !== false) {
+				throw new \RuntimeException("Couldn't load the given requested movie.");
+			}
 			$xmlResult = simplexml_load_string($result, $class_name);
 			if($xmlResult === false) {
 				throw new RuntimeException("The DFI webservice returned invalid XML for url = '$url'.");
