@@ -1,12 +1,19 @@
 <?php
 namespace CHAOS\Harvester\DFI\Processors;
 use CHAOS\Harvester\Shadows\ObjectShadow;
+use CHAOS\Harvester\Shadows\SkippedObjectShadow;
 
 class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor implements \CHAOS\Harvester\Loadable {
 	
 	public function __construct($harvester, $name, $parameter = null) {
 		$this->_harvester = $harvester;
 		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
+	}
+	
+	protected function generateQuery($externalObject) {
+		$legacyQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
+		$newQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-ExternalIdentifier:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
+		return sprintf("(%s OR %s)", $legacyQuery, $newQuery);
 	}
 	
 	public function process($externalObject, $shadow = null) {
@@ -16,11 +23,8 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 		
 		$this->_harvester->info("Processing '%s' #%d", $externalObject->Title, $externalObject->ID);
 		
-		$legacyQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
-		$newQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-ExternalIdentifier:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
-		
 		$shadow = new ObjectShadow();
-		$shadow->query = sprintf("(%s OR %s)", $legacyQuery, $newQuery);
+		$shadow->query = $this->generateQuery($externalObject);
 		$shadow->objectTypeId = $this->_objectTypeId;
 		$shadow->folderId = $this->_folderId;
 		$shadow = $this->_harvester->process('movie_metadata_dfi', $externalObject, $shadow);
@@ -31,6 +35,12 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 		$shadow = $this->_harvester->process('movie_file_lowres_images', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_main_image', $externalObject, $shadow);
 		
+		return $shadow;
+	}
+	
+	function skip($externalObject, $shadow = null) {
+		$shadow = new SkippedObjectShadow();
+		$shadow->query = $this->generateQuery($externalObject);
 		return $shadow;
 	}
 }
