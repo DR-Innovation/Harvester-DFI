@@ -101,7 +101,7 @@
 				<xs:element name="Location" type="xs:string"
 					maxOccurs="1" minOccurs="0" />
 				<xs:element name="RightsDescription" type="xs:string"
-					maxOccurs="1" minOccurs="0" />
+					maxOccurs="1" minOccurs="1" />
 				<xs:element name="GeoData" maxOccurs="1"
 					minOccurs="0">
 					<xs:complexType>
