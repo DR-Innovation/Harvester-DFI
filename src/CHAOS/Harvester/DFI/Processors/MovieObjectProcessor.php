@@ -22,11 +22,10 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 		/* @var $externalObject \SimpleXMLElement */
 		
 		$this->_harvester->info("Processing '%s' #%d", $externalObject->Title, $externalObject->ID);
-		
+
 		$shadow = new ObjectShadow();
+		$shadow = $this->initializeShadow($shadow);
 		$shadow->query = $this->generateQuery($externalObject);
-		$shadow->objectTypeId = $this->_objectTypeId;
-		$shadow->folderId = $this->_folderId;
 		$shadow = $this->_harvester->process('movie_metadata_dfi', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_metadata_dka', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_metadata_dka2', $externalObject, $shadow);
@@ -40,6 +39,7 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 	
 	function skip($externalObject, $shadow = null) {
 		$shadow = new SkippedObjectShadow();
+		$shadow = $this->initializeShadow($shadow);
 		$shadow->query = $this->generateQuery($externalObject);
 		return $shadow;
 	}
