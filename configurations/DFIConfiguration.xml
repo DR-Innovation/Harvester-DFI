@@ -29,6 +29,9 @@
 		<chc:ObjectProcessor className="MovieObjectProcessor"
 			namespace="\CHAOS\Harvester\DFI\Processors" name="movie">
 			<chc:Filters>
+				<chc:EmbeddedFilter language="PHP" name="wrong-filter"><![CDATA[
+					return true;
+				]]></chc:EmbeddedFilter>
 				<chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
 				foreach($externalObject->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
 					if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
@@ -64,6 +67,14 @@
 			</chc:Filters>
 			<chc:FolderId>2</chc:FolderId>
 			<chc:ObjectTypeId>36</chc:ObjectTypeId>
+			<chc:PublishSettings>
+				<chc:PublishAccesspoint>
+					30000000-0000-0000-0000-000000000000
+				</chc:PublishAccesspoint>
+				<chc:UnpublishAccesspoint>
+					30000000-0000-0000-0000-000000000000
+				</chc:UnpublishAccesspoint>
+			</chc:PublishSettings>
 		</chc:ObjectProcessor>
 		<chc:MetadataProcessor className="DFIMovieMetadataProcessor"
 			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dfi">
