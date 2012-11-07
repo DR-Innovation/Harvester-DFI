@@ -24,13 +24,22 @@ class BasicSingleByReferenceMode extends \CHAOS\Harvester\Modes\SingleByReferenc
 			// This is an integer id.
 			$reference = 'http://nationalfilmografien.service.dfi.dk/movie.svc/'.$reference;
 		}
+		echo "\n";
 		
-		$movieObject = $dfi->load($reference);
-		$movieObject->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
-		$movieObject->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+		// Needed for making the error reporting not through warnings.
+		$movie = null;
+		$movieShadow = null;
+		try {
+			$this->_harvester->info("Fetching external object of %s.", $reference);
+			$movie = $dfi->load($reference);
+			$movie->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
+			$movie->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+			
+			$movieShadow = $this->	_harvester->process('movie', $movie);
+		} catch(\Exception $e) {
+			$this->_harvester->registerProcessingException($e, $movie, $movieShadow);
+		}
 		
-		print("\n");
-		$this->_harvester->info("Fetching external object of %s.", $reference);
-		$movieShadow = $this->_harvester->process('movie', $movieObject);
+		echo "\n";
 	}
 }

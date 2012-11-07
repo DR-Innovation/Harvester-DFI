@@ -27,11 +27,19 @@ class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harv
 		foreach($movies as $movie) {
 			printf("[#%u] ", $m++);
 			$this->_harvester->info("Fetching external object of '%s' #%s.", $movie->Name, $movie->ID);
-			$movieObject = $dfi->load($movie->Ref);
-			$movieObject->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
-			$movieObject->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
 			
-			$movieShadow = $this->_harvester->process('movie', $movieObject);
+			// Needed for making the error reporting not through warnings.
+			$movie = null;
+			$movieShadow = null;
+			try {
+				$movie = $dfi->load($movie->Ref);
+				$movie->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
+				$movie->registerXPathNamespace("a", "http://schemas.microsoft.com/2003/10/Serialization/Arrays");
+				
+				$movieShadow = $this->_harvester->process('movie', $movie);
+			} catch(\Exception $e) {
+				$this->_harvester->registerProcessingException($e, $movie, $movieShadow);
+			}
 			print("\n");
 		}
 	}
