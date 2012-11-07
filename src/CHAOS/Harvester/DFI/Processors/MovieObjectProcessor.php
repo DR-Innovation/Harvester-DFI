@@ -34,6 +34,8 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 		$shadow = $this->_harvester->process('movie_file_lowres_images', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_main_image', $externalObject, $shadow);
 		
+		$shadow->commit($this->_harvester);
+		
 		return $shadow;
 	}
 	
@@ -41,6 +43,9 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 		$shadow = new SkippedObjectShadow();
 		$shadow = $this->initializeShadow($shadow);
 		$shadow->query = $this->generateQuery($externalObject);
+		
+		$shadow->commit($this->_harvester);
+		
 		return $shadow;
 	}
 }

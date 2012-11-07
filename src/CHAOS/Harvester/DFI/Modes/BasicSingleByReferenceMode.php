@@ -32,9 +32,5 @@ class BasicSingleByReferenceMode extends \CHAOS\Harvester\Modes\SingleByReferenc
 		print("\n");
 		$this->_harvester->info("Fetching external object of %s.", $reference);
 		$movieShadow = $this->_harvester->process('movie', $movieObject);
-		
-		timed();
-		$movieShadow->commit($this->_harvester);
-		timed('chaos');
 	}
 }
