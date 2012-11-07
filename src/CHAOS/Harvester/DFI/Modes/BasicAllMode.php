@@ -20,10 +20,12 @@ class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harv
 			throw new RuntimeException(__CLASS__." expects a dfi client from the harvester.");
 		}
 		
+		$m = 1;
+		
 		$this->_harvester->info("Fetching references to all movies.");
 		$movies = $dfi->fetchMultipleMovies();
 		foreach($movies as $movie) {
-			print("\n");
+			printf("[#%u] ", $m++);
 			$this->_harvester->info("Fetching external object of '%s' #%s.", $movie->Name, $movie->ID);
 			$movieObject = $dfi->load($movie->Ref);
 			$movieObject->registerXPathNamespace("dfi", "http://schemas.datacontract.org/2004/07/Netmester.DFI.RestService.Items");
@@ -33,6 +35,7 @@ class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harv
 			timed();
 			$movieShadow->commit($this->_harvester);
 			timed('chaos');
+			print("\n");
 		}
 	}
 }
