@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chc:ChaosHarvesterConfiguration
+	xmlns:chc="http://www.example.org/ChaosHarvesterConfiguration"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.example.org/ChaosHarvesterConfiguration ../../Base/schemas/ChaosHarvesterConfiguration.xsd ">
+	<chc:Organisation>Det Danske Filminstitut</chc:Organisation>
+	<chc:Project>Nationalfilmografien</chc:Project>
+	<chc:Description>This is simply a test ..</chc:Description>
+	<chc:BasePath fromEnvironment="BASEPATH" />
+	<chc:IncludePaths>
+		<chc:path>Base/src</chc:path>
+		<chc:path>/chaos-client/src</chc:path>
+		<chc:path>/home/creen/Projects/Timed-PHP/src</chc:path>
+		<chc:path>DFI/src</chc:path>
+	</chc:IncludePaths>
+	<chc:ChaosConfiguration>
+		<chc:URL fromEnvironment="CHAOS_URL" />
+		<chc:Email fromEnvironment="CHAOS_EMAIL" />
+		<chc:Password fromEnvironment="CHAOS_PASSWORD" />
+	</chc:ChaosConfiguration><chc:ExternalClient name="dfi" className="DFIClient" namespace="\CHAOS\Harvester\DFI">
+		<chc:Parameter name="URL">http://nationalfilmografien.service.dfi.dk/</chc:Parameter>
+	</chc:ExternalClient><chc:Modes>
+		<chc:Mode className="BasicAllMode" type="All"
+			namespace="\CHAOS\Harvester\DFI\Modes" name="all" />
+		<chc:Mode className="BasicSingleByReferenceMode" type="SingleByReference"
+			namespace="\CHAOS\Harvester\DFI\Modes" name="single-reference" />
+	</chc:Modes>
+	<chc:Processors>
+		<chc:ObjectProcessor className="MovieObjectProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie">
+			<chc:Filters>
+				<chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
+				foreach($externalObject->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
+					if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
+						return "The subcategory is $subCategory.";
+					}
+				}
+				$year = null;
+				if(strlen($externalObject->ProductionYear) > 0) {
+					$year = intval($externalObject->ProductionYear);
+				} elseif(strlen($externalObject->ReleaseYear) > 0) {
+					$year = intval($externalObject->ReleaseYear);
+				}
+				if($year != null && $year < 100) {
+					$year += 1900;
+				}
+				// Harvest only files in this interval: 1896-1959
+				if($year == null) {
+					return "The movie had no year set, so it cannot be determined if its inside the desired interval.";
+				} elseif($year < 1896 || $year > 1959) {
+					return "The movie was produced or released at year $year which is outside of the desired interval.";
+				}
+		
+				$mediaFiles = 0;
+				// Movies
+				$mediaFiles += $externalObject->FlashMovies->FlashMovieItem->count();
+				$mediaFiles += $externalObject->MainImage->SrcThumb->count();
+				if($mediaFiles < 1) {
+					return "The movie has no medias attached.";
+				}
+		
+				return true;
+		  		]]></chc:EmbeddedFilter>
+			</chc:Filters>
+			<chc:FolderId>2</chc:FolderId>
+			<chc:ObjectTypeId>36</chc:ObjectTypeId>
+			<chc:PublishSettings>
+				<chc:PublishAccesspoint>
+					30000000-0000-0000-0000-000000000000
+				</chc:PublishAccesspoint>
+				<chc:UnpublishAccesspoint>
+					30000000-0000-0000-0000-000000000000
+				</chc:UnpublishAccesspoint>
+			</chc:PublishSettings>
+		</chc:ObjectProcessor>
+		<chc:MetadataProcessor className="DFIMovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dfi">
+			<chc:validate>true</chc:validate>
+			<chc:schemaGUID>d361328e-4fd2-4cb1-a2b4-37ecc7679a6e</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:MetadataProcessor className="DKAMovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dka">
+			<chc:validate>false</chc:validate>
+			<chc:schemaGUID>00000000-0000-0000-0000-000063c30000</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:MetadataProcessor className="DKA2MovieMetadataProcessor"
+			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dka2">
+			<chc:validate>true</chc:validate>
+			<chc:schemaGUID>5906a41b-feae-48db-bfb7-714b3e105396</chc:schemaGUID>
+		</chc:MetadataProcessor>
+		<chc:FileProcessor className="VideoFileProcessor"
+			name='movie_file_video' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>1</chc:FormatId>
+			<chc:DestinationId>2</chc:DestinationId>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="MainImageFileProcessor"
+			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>9</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="ImageFileProcessor"
+			name='movie_file_images' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>3</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
+		</chc:FileProcessor>
+		<chc:FileProcessor className="LowresImageFileProcessor"
+			name='movie_file_lowres_images' namespace="\CHAOS\Harvester\DFI\Processors">
+			<chc:FormatId>8</chc:FormatId>
+			<chc:DestinationId>1</chc:DestinationId>
+		</chc:FileProcessor>
+	</chc:Processors>
+	
+	
+	
+</chc:ChaosHarvesterConfiguration>

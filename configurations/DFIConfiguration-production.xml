@@ -29,9 +29,6 @@
 		<chc:ObjectProcessor className="MovieObjectProcessor"
 			namespace="\CHAOS\Harvester\DFI\Processors" name="movie">
 			<chc:Filters>
-				<chc:EmbeddedFilter language="PHP" name="wrong-filter"><![CDATA[
-					return true;
-				]]></chc:EmbeddedFilter>
 				<chc:EmbeddedFilter language="PHP" name="embedded"><![CDATA[
 				foreach($externalObject->xpath('/dfi:MovieItem/dfi:SubCategories/a:string') as $subCategory) {
 					if($subCategory == 'Pornofilm' || $subCategory == 'Erotiske film') {
@@ -65,14 +62,14 @@
 				return true;
 		  		]]></chc:EmbeddedFilter>
 			</chc:Filters>
-			<chc:FolderId>2</chc:FolderId>
+			<chc:FolderId>457</chc:FolderId>
 			<chc:ObjectTypeId>36</chc:ObjectTypeId>
 			<chc:PublishSettings>
 				<chc:PublishAccesspoint>
-					30000000-0000-0000-0000-000000000000
+					C4C2B8DA-A980-11E1-814B-02CEA2621172
 				</chc:PublishAccesspoint>
 				<chc:UnpublishAccesspoint>
-					30000000-0000-0000-0000-000000000000
+					C4C2B8DA-A980-11E1-814B-02CEA2621172
 				</chc:UnpublishAccesspoint>
 			</chc:PublishSettings>
 		</chc:ObjectProcessor>
@@ -93,23 +90,23 @@
 		</chc:MetadataProcessor>
 		<chc:FileProcessor className="VideoFileProcessor"
 			name='movie_file_video' namespace="\CHAOS\Harvester\DFI\Processors">
-			<chc:FormatId>1</chc:FormatId>
-			<chc:DestinationId>2</chc:DestinationId>
+			<chc:FormatId>8</chc:FormatId>
+			<chc:DestinationId>107</chc:DestinationId>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="MainImageFileProcessor"
 			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI\Processors">
-			<chc:FormatId>9</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+			<chc:FormatId>10</chc:FormatId>
+			<chc:DestinationId>106</chc:DestinationId>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="ImageFileProcessor"
 			name='movie_file_images' namespace="\CHAOS\Harvester\DFI\Processors">
-			<chc:FormatId>3</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+			<chc:FormatId>42</chc:FormatId>
+			<chc:DestinationId>106</chc:DestinationId>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="LowresImageFileProcessor"
 			name='movie_file_lowres_images' namespace="\CHAOS\Harvester\DFI\Processors">
-			<chc:FormatId>8</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+			<chc:FormatId>51</chc:FormatId>
+			<chc:DestinationId>106</chc:DestinationId>
 		</chc:FileProcessor>
 	</chc:Processors>
 	
