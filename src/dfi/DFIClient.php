@@ -15,7 +15,6 @@
  */
 
 namespace dfi;
-use model\MovieItem;
 use RuntimeException;
 
 class DFIClient {
