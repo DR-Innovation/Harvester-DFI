@@ -33,6 +33,11 @@ class LowresImageFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor
 				$fileShadow->parentFileShadow = $shadow->fileShadows[$position];
 				
 				$shadow->fileShadows[] = $fileShadow;
+				
+				if(!in_array('Image', $shadow->extras['fileTypes'])) {
+					$shadow->extras['fileTypes'][] = 'Image';
+				}
+				
 				$position++;
 			} else {
 				trigger_error("Found an image with unknown URL.\n", E_USER_WARNING);

@@ -20,6 +20,9 @@ class VideoFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor {
 			if(preg_match("#$urlBase(.*)#", $m->FilmUrl, $filenameMatches) === 1) {
 				$pathinfo = pathinfo($filenameMatches[1]);
 				$shadow->fileShadows[] = $this->createFileShadow($pathinfo['dirname'], $pathinfo['basename']);
+				if(!in_array('Video', $shadow->extras['fileTypes'])) {
+					$shadow->extras['fileTypes'][] = 'Video';
+				}
 			} else {
 				trigger_error("Found a video with unknown URL.\n", E_USER_WARNING);
 			}

@@ -36,7 +36,7 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 			$result->addChild("ExternalURL", htmlspecialchars($externalObject->Url));
 		}
 		
-		$result->addChild("Type", implode(',', $fileTypes));
+		$result->addChild("Type", $shadow->extras["fileTypes"]);
 		
 		// TODO: Determine if this is when the import happened or when the movie was created?
 		if(strlen($externalObject->ProductionYear) > 0) {

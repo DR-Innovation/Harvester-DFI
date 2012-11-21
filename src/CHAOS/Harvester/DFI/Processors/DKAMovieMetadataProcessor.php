@@ -49,7 +49,7 @@ class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProc
 		
 		$result->addChild("Organization", self::DFI_ORGANIZATION_NAME);
 		
-		$result->addChild("Type", implode(',', $fileTypes));
+		$result->addChild("Type", $shadow->extras["fileTypes"]);
 		
 		if(strlen($externalObject->ProductionYear) > 0) {
 			$result->addChild("CreatedDate", self::yearToXMLDate((string)$externalObject->ProductionYear));

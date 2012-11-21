@@ -21,6 +21,10 @@ class MainImageFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor {
 		if(count($mainImage) > 0 && preg_match("#$urlBase(.*)#", $mainImage[0], $filenameMatches) === 1) {
 			$pathinfo = pathinfo($filenameMatches[1]);
 			$shadow->fileShadows[] = $this->createFileShadow($pathinfo['dirname'], $pathinfo['basename']);
+			
+			if(!in_array('Image', $shadow->extras['fileTypes'])) {
+				$shadow->extras['fileTypes'][] = 'Image';
+			}
 		}
 	
 		return $shadow;

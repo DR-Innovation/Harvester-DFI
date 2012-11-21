@@ -25,14 +25,18 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor i
 
 		$shadow = new ObjectShadow();
 		$shadow = $this->initializeShadow($shadow);
+		$shadow->extras["fileTypes"] = array();
 		$shadow->query = $this->generateQuery($externalObject);
-		$shadow = $this->_harvester->process('movie_metadata_dfi', $externalObject, $shadow);
-		$shadow = $this->_harvester->process('movie_metadata_dka', $externalObject, $shadow);
-		$shadow = $this->_harvester->process('movie_metadata_dka2', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_video', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_images', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_lowres_images', $externalObject, $shadow);
 		$shadow = $this->_harvester->process('movie_file_main_image', $externalObject, $shadow);
+		if(is_array($shadow->extras["fileTypes"])) {
+			$shadow->extras["fileTypes"] = implode(', ', $shadow->extras["fileTypes"]);
+		}
+		$shadow = $this->_harvester->process('movie_metadata_dfi', $externalObject, $shadow);
+		$shadow = $this->_harvester->process('movie_metadata_dka', $externalObject, $shadow);
+		$shadow = $this->_harvester->process('movie_metadata_dka2', $externalObject, $shadow);
 		
 		$shadow->commit($this->_harvester);
 		
