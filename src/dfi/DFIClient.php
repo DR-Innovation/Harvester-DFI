@@ -129,6 +129,7 @@ class DFIClient {
 			if(strstr($result, 'No item with the requested ID was found in the database') !== false) {
 				throw new \RuntimeException("Couldn't load the given requested movie.");
 			}
+			$result = $this->cleanInvalidSpecialChars($result);
 			$xmlResult = simplexml_load_string($result, $class_name);
 			if($xmlResult === false) {
 				throw new RuntimeException("The DFI webservice returned invalid XML for url = '$url'.");
@@ -136,5 +137,10 @@ class DFIClient {
 				return $xmlResult;
 			}
 		}
+	}
+	
+	protected function cleanInvalidSpecialChars($result) {
+		$result = str_replace(array("&#x1E;", "&#xB;"), "", $result);
+		return $result;
 	}
 }
