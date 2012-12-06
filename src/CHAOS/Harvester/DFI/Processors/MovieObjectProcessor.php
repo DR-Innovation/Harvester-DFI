@@ -3,12 +3,7 @@ namespace CHAOS\Harvester\DFI\Processors;
 use CHAOS\Harvester\Shadows\ObjectShadow;
 use CHAOS\Harvester\Shadows\SkippedObjectShadow;
 
-class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor implements \CHAOS\Harvester\Loadable {
-	
-	public function __construct($harvester, $name, $parameter = null) {
-		$this->_harvester = $harvester;
-		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
-	}
+class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 	
 	protected function generateQuery($externalObject) {
 		$legacyQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));

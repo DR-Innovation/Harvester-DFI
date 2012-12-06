@@ -2,7 +2,7 @@
 namespace CHAOS\Harvester\DFI\Processors;
 use \SimpleXMLElement;
 
-class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProcessor implements \CHAOS\Harvester\Loadable {
+class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProcessor {
 	
 	/**
 	 * This name will be used as the organisation when generating XML.
@@ -15,12 +15,6 @@ class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProc
 	 * @var string
 	 */
 	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut";
-	
-	public function __construct($harvester, $name, $parameters = null) {
-		$this->_harvester = $harvester;
-		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
-		$this->setParameters($parameters);
-	}
 	
 	public function generateMetadata($externalObject, $shadow = null) {
 		$this->_harvester->debug(__CLASS__." is generating metadata.");

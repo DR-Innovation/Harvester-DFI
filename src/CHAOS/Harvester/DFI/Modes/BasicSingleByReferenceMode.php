@@ -2,11 +2,6 @@
 namespace CHAOS\Harvester\DFI\Modes;
 class BasicSingleByReferenceMode extends \CHAOS\Harvester\Modes\SingleByReferenceMode implements \CHAOS\Harvester\Loadable {
 	
-	public function __construct($harvester, $name, $parameters = null) {
-		$this->_harvester = $harvester;
-		$this->_harvester->debug("A ".__CLASS__." named '$name' was constructing.");
-	}
-	
 	public function execute($reference) {
 		$this->_harvester->debug(__CLASS__." is executing.");
 		
