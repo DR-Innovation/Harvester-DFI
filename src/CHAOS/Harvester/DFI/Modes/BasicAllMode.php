@@ -20,7 +20,7 @@ class BasicAllMode extends \CHAOS\Harvester\Modes\AllMode implements \CHAOS\Harv
 		$this->_harvester->info("Fetching references to all movies.");
 		$movies = $dfi->fetchMultipleMovies();
 		foreach($movies as $movie) {
-			printf("[#%u] ", $m++);
+			printf("[%u/%u] ", $m++, count($movies));
 			$this->_harvester->info("Fetching external object of '%s' #%s.", $movie->Name, $movie->ID);
 			
 			// Needed for making the error reporting not through warnings.
