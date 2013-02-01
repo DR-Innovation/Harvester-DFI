@@ -91,22 +91,34 @@
 		<chc:FileProcessor className="VideoFileProcessor"
 			name='movie_file_video' namespace="\CHAOS\Harvester\DFI\Processors">
 			<chc:FormatId>1</chc:FormatId>
-			<chc:DestinationId>2</chc:DestinationId>
+		   	<chc:Destination name="default">
+		   		<chc:baseURL>http://video.dfi.dk/</chc:baseURL>
+		   		<chc:id>2</chc:id>
+		   	</chc:Destination>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="MainImageFileProcessor"
 			name='movie_file_main_image' namespace="\CHAOS\Harvester\DFI\Processors">
 			<chc:FormatId>9</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+	    	<chc:Destination name="default">
+	    		<chc:baseURL>http://www2.scanpix.eu/</chc:baseURL>
+	    		<chc:id>1</chc:id>
+	    	</chc:Destination>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="ImageFileProcessor"
 			name='movie_file_images' namespace="\CHAOS\Harvester\DFI\Processors">
 			<chc:FormatId>3</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+	    	<chc:Destination name="default">
+	    		<chc:baseURL>http://www2.scanpix.eu/</chc:baseURL>
+	    		<chc:id>1</chc:id>
+	    	</chc:Destination>
 		</chc:FileProcessor>
 		<chc:FileProcessor className="LowresImageFileProcessor"
 			name='movie_file_lowres_images' namespace="\CHAOS\Harvester\DFI\Processors">
 			<chc:FormatId>8</chc:FormatId>
-			<chc:DestinationId>1</chc:DestinationId>
+	    	<chc:Destination name="default">
+	    		<chc:baseURL>http://www2.scanpix.eu/</chc:baseURL>
+	    		<chc:id>1</chc:id>
+	    	</chc:Destination>
 		</chc:FileProcessor>
 	</chc:Processors>
 	
