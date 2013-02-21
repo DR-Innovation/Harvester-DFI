@@ -16,7 +16,7 @@ class DKAMovieMetadataProcessor extends \CHAOS\Harvester\Processors\MetadataProc
 	 */
 	const RIGHTS_DESCIPTION = "Copyright © Det Danske Filminstitut";
 	
-	public function generateMetadata($externalObject, $shadow = null) {
+	public function generateMetadata($externalObject, &$shadow = null) {
 		$this->_harvester->debug(__CLASS__." is generating metadata.");
 		
 		// TODO: Generate this from the shadow.

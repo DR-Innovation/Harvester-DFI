@@ -4,7 +4,7 @@ use \SimpleXMLElement;
 
 class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 	
-	public function generateMetadata($externalObject, $shadow = null) {
+	public function generateMetadata($externalObject, &$shadow = null) {
 		$this->_harvester->debug(__CLASS__." is generating metadata.");
 		
 		$movieItem = $externalObject;
