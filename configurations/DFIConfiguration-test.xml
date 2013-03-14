@@ -9,8 +9,8 @@
 	<chc:BasePath fromEnvironment="BASEPATH" />
 	<chc:IncludePaths>
 		<chc:path>Base/src</chc:path>
-		<chc:path>chaos-client/src</chc:path>
-		<chc:path>Timed-PHP/src</chc:path>
+		<chc:path>Base/lib/chaos-client/src</chc:path>
+		<chc:path>Base/lib/Timed-PHP/src</chc:path>
 		<chc:path>../src</chc:path>
 	</chc:IncludePaths>
 	<chc:ChaosConfiguration>
