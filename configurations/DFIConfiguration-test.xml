@@ -9,7 +9,7 @@
 	<chc:BasePath fromEnvironment="BASEPATH" />
 	<chc:IncludePaths>
 		<chc:path>abstract-harvester-base/src</chc:path>
-		<chc:path>abstract-harvester-base/lib/chaos-client/src</chc:path>
+		<chc:path>abstract-harvester-base/lib/CHAOS-Client/src</chc:path>
 		<chc:path>abstract-harvester-base/lib/Timed-PHP/src</chc:path>
 		<chc:path>../src</chc:path>
 	</chc:IncludePaths>
