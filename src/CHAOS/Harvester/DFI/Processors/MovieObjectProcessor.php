@@ -1,7 +1,6 @@
 <?php
 namespace CHAOS\Harvester\DFI\Processors;
 use CHAOS\Harvester\Shadows\ObjectShadow;
-use CHAOS\Harvester\Shadows\SkippedObjectShadow;
 
 class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 	
