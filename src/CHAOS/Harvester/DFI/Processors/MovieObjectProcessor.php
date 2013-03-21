@@ -10,7 +10,7 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 		return sprintf("(%s OR %s)", $legacyQuery, $newQuery);
 	}
 	
-	public function process($externalObject, &$shadow = null) {
+	public function process(&$externalObject, &$shadow = null) {
 		$this->_harvester->debug(__CLASS__." is processing.");
 		
 		/* @var $externalObject \SimpleXMLElement */

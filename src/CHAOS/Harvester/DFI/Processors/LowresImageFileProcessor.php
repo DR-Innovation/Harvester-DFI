@@ -9,7 +9,7 @@ class LowresImageFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor
 
 	// const DFI_IMAGE_SCANPIX_BASE_PATH = 'http://www2.scanpix.eu/';
 
-	public function process($externalObject, &$shadow = null) {
+	public function process(&$externalObject, &$shadow = null) {
 		$this->_harvester->debug(__CLASS__." is processing.");
 	
 		assert($shadow instanceof ObjectShadow);
