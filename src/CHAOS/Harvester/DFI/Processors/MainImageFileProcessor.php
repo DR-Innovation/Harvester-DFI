@@ -10,8 +10,7 @@ class MainImageFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor {
 	// const DFI_IMAGE_SCANPIX_BASE_PATH = 'http://www2.scanpix.eu/';
 
 	public function process(&$externalObject, &$shadow = null) {
-		$this->_harvester->debug(__CLASS__." is processing.");
-	
+		// Precondition
 		assert($shadow instanceof ObjectShadow);
 		
 		$mainImage = strval($externalObject->MainImage->SrcMini);

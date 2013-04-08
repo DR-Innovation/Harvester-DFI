@@ -10,8 +10,7 @@ class VideoFileProcessor extends \CHAOS\Harvester\Processors\FileProcessor {
 	// const DFI_VIDEO_BASE = 'http://video.dfi.dk/';
 
 	public function process(&$externalObject, &$shadow = null) {
-		$this->_harvester->debug(__CLASS__." is processing.");
-	
+		// Precondition
 		assert($shadow instanceof ObjectShadow);
 		
 		foreach($externalObject->FlashMovies->FlashMovieItem as $m) {

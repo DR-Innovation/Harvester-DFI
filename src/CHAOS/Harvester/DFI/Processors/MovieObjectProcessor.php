@@ -11,8 +11,6 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 	}
 	
 	public function process(&$externalObject, &$shadow = null) {
-		$this->_harvester->debug(__CLASS__." is processing.");
-		
 		/* @var $externalObject \SimpleXMLElement */
 		
 		$this->_harvester->info("Processing '%s' #%d", $externalObject->Title, $externalObject->ID);
