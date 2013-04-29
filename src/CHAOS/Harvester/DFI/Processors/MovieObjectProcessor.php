@@ -5,8 +5,8 @@ use CHAOS\Harvester\Shadows\ObjectShadow;
 class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 	
 	protected function generateQuery($externalObject) {
-		$legacyQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
-		$newQuery = sprintf("(FolderTree:%s AND ObjectTypeID:%s AND DKA-ExternalIdentifier:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
+		$legacyQuery = sprintf("(FolderID:%s AND ObjectTypeID:%s AND DKA-DFI-ID:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
+		$newQuery = sprintf("(FolderID:%s AND ObjectTypeID:%s AND DKA-ExternalIdentifier:%s)", $this->_folderId, $this->_objectTypeId, intval($externalObject->ID));
 		return sprintf("(%s OR %s)", $legacyQuery, $newQuery);
 	}
 	
@@ -16,9 +16,9 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 		$this->_harvester->info("Processing '%s' #%d", $externalObject->Title, $externalObject->ID);
 
 		$shadow = new ObjectShadow();
-		$shadow = $this->initializeShadow($shadow);
 		$shadow->extras["fileTypes"] = array();
-		$shadow->query = $this->generateQuery($externalObject);
+		$shadow = $this->initializeShadow($externalObject, $shadow);
+		
 		$this->_harvester->process('movie_file_video', $externalObject, $shadow);
 		$this->_harvester->process('movie_file_images', $externalObject, $shadow);
 		$this->_harvester->process('movie_file_lowres_images', $externalObject, $shadow);
@@ -35,14 +35,16 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 		return $shadow;
 	}
 	
+	/*
 	function skip($externalObject, &$shadow = null) {
 		$shadow = new ObjectShadow();
 		$shadow->skipped = true;
-		$shadow = $this->initializeShadow($shadow);
+		$shadow = $this->initializeShadow($externalObject, $shadow);
 		$shadow->query = $this->generateQuery($externalObject);
 		
 		$shadow->commit($this->_harvester);
 		
 		return $shadow;
 	}
+	*/
 }
