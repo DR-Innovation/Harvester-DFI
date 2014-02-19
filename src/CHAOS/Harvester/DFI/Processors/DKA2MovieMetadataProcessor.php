@@ -67,12 +67,12 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 		// This goes for the new DKA Metadata.
 		foreach($externalObject->xpath('/dfi:MovieItem/dfi:ProductionCompanies/dfi:CompanyListItem') as $company) {
 			$creator = $creators->addChild("Creator");
-			$creator->addAttribute("Name", trim(htmlspecialchars($company->Name)));
+			$creator->nodeValue = trim(htmlspecialchars($company->Name));
 			$creator->addAttribute("Role", 'Production');
 		}
 		foreach($externalObject->xpath('/dfi:MovieItem/dfi:DistributionCompanies/dfi:CompanyListItem') as $company) {
 			$creator = $creators->addChild("Creator");
-			$creator->addAttribute("Name", trim(htmlspecialchars($company->Name)));
+			$creator->nodeValue = trim(htmlspecialchars($company->Name));
 			$creator->addAttribute("Role", 'Distribution');
 		}
 		
