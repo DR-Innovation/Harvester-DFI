@@ -50,8 +50,7 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 		$contributors = $result->addChild("Contributors");
 		foreach($externalObject->Credits->children() as $creditListItem) {
 			if($this->isContributor($creditListItem->Type)) {
-				$contributor = $contributors->addChild("Contributor");
-				$contributor->addAttribute("Name", trim(htmlspecialchars($creditListItem->Name)));
+				$contributor = $contributors->addChild("Contributor", trim(htmlspecialchars($creditListItem->Name)));
 				$contributor->addAttribute("Role", self::translateCreditTypeToRole(htmlspecialchars($creditListItem->Type)));
 			}
 		}
@@ -59,20 +58,17 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 		$creators = $result->addChild("Creators");
 		foreach($externalObject->Credits->children() as $creditListItem) {
 			if($this->isCreator($creditListItem->Type)) {
-				$creator = $creators->addChild("Creator");
-				$creator->addAttribute("Name", trim(htmlspecialchars($creditListItem->Name)));
+				$creator = $creators->addChild("Creator", trim(htmlspecialchars($creditListItem->Name)));
 				$creator->addAttribute("Role", self::translateCreditTypeToRole(htmlspecialchars($creditListItem->Type)));
 			}
 		}
 		// This goes for the new DKA Metadata.
 		foreach($externalObject->xpath('/dfi:MovieItem/dfi:ProductionCompanies/dfi:CompanyListItem') as $company) {
-			$creator = $creators->addChild("Creator");
-			$creator->nodeValue = trim(htmlspecialchars($company->Name));
+			$creator = $creators->addChild("Creator", trim(htmlspecialchars($company->Name)));
 			$creator->addAttribute("Role", 'Production');
 		}
 		foreach($externalObject->xpath('/dfi:MovieItem/dfi:DistributionCompanies/dfi:CompanyListItem') as $company) {
-			$creator = $creators->addChild("Creator");
-			$creator->nodeValue = trim(htmlspecialchars($company->Name));
+			$creator = $creators->addChild("Creator", trim(htmlspecialchars($company->Name)));
 			$creator->addAttribute("Role", 'Distribution');
 		}
 		
