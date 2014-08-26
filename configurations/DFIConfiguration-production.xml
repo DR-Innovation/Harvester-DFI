@@ -6,6 +6,7 @@
 	<chc:Organisation>Det Danske Filminstitut</chc:Organisation>
 	<chc:Project>Nationalfilmografien</chc:Project>
 	<chc:Description>This is simply a test ..</chc:Description>
+  	<chc:Timezone>Europe/Copenhagen</chc:Timezone>
 	<chc:BasePath fromEnvironment="BASEPATH" />
 	<chc:IncludePaths>
 		<chc:path>abstract-harvester-base/src</chc:path>
@@ -74,6 +75,16 @@
 				</chc:UnpublishAccesspoint>
 			</chc:PublishSettings>
 		</chc:ObjectProcessor>
+		<chc:ObjectProcessor className="PassThroughObjectProcessor"
+    	namespace="\CHAOS\Harvester\Processors" name="unpublished-by-curator-processor">
+	    	<chc:Filters>
+	    		<chc:Filter className="UnpublishedByCuratorFilter" namespace="\CHAOS\Harvester\DKA\Filters" name="unpublished-by-curator">
+				</chc:Filter>
+			</chc:Filters>
+	    	<chc:FolderId></chc:FolderId>
+	    	<chc:ObjectTypeId></chc:ObjectTypeId>
+			<chc:PublishSettings></chc:PublishSettings>
+	    </chc:ObjectProcessor>
 		<chc:MetadataProcessor className="DFIMovieMetadataProcessor"
 			namespace="\CHAOS\Harvester\DFI\Processors" name="movie_metadata_dfi">
 			<chc:validate>true</chc:validate>

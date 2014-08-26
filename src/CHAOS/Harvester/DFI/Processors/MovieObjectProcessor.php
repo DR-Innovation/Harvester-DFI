@@ -18,6 +18,13 @@ class MovieObjectProcessor extends \CHAOS\Harvester\Processors\ObjectProcessor {
 		$shadow = new ObjectShadow();
 		$shadow->extras["fileTypes"] = array();
 		$shadow = $this->initializeShadow($externalObject, $shadow);
+
+		$this->_harvester->process('unpublished-by-curator-processor', $externalObject, $shadow);
+		
+		// If the unpublished by curator filter was failing ..
+		if($shadow->skipped) {
+			return $shadow;
+		}
 		
 		$this->_harvester->process('movie_file_video', $externalObject, $shadow);
 		$this->_harvester->process('movie_file_images', $externalObject, $shadow);
