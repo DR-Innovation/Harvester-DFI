@@ -43,8 +43,38 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 			$result->addChild("CreatedDate", self::yearToXMLDateTime((string)$externalObject->ProductionYear));
 		}
 		
-		if(strlen($externalObject->ReleaseYear) > 0) {
+		/*if(strlen($externalObject->ReleaseYear) > 0) {
 			$result->addChild("FirstPublishedDate", self::yearToXMLDateTime((string)$externalObject->ReleaseYear));
+		}*/
+		
+		// Get date from 3 objects (ProductionYear, ReleaseYear, PremiereDate)
+		$dates = array();
+		$dates[0] = strval($externalObject->Premiere->PremiereDate);
+		$dates[1] = strval($externalObject->ReleaseYear);
+		$dates[2] = strval($externalObject->ProductionYear);
+		
+		// Finds the best/most precise date (longest)
+		$date = '';
+		foreach ($dates as $d) {
+			if (strlen($d) > strlen($date)) {
+				$dateparse = date_parse($d);
+				if ($dateparse["error_count"] === 0) {
+					$date = $d;
+				}
+			}
+		}
+
+		// Makes sure the date is valid
+		$dateparse = date_parse($date);
+		if ($dateparse["error_count"] === 0) {
+			if (strlen($date) === 4) {
+				$date = self::yearToXMLDateTime($date);
+			} else {
+				$date = new \DateTime($date);
+				$date = $date->format('Y-m-d\TH:i:s');
+			}
+
+			$result->addChild("FirstPublishedDate", $date);
 		}
 		
 		$contributors = $result->addChild("Contributors");
