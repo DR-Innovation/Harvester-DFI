@@ -50,8 +50,8 @@ class DKA2MovieMetadataProcessor extends DKAMovieMetadataProcessor {
 		// Get date from 3 objects (ProductionYear, ReleaseYear, PremiereDate)
 		$dates = array();
 		$dates[0] = strval($externalObject->Premiere->PremiereDate);
-		$dates[1] = strval($externalObject->ReleaseYear);
-		$dates[2] = strval($externalObject->ProductionYear);
+		//$dates[1] = strval($externalObject->ReleaseYear);
+		$dates[1] = strval($externalObject->ProductionYear);
 		
 		// Finds the best/most precise date (longest)
 		$date = '';
